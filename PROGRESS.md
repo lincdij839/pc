@@ -9,18 +9,20 @@
 - ✅ 字串、數字字面量
 - ✅ 註釋處理
 
-### 2. Parser (語法分析器) - **95%** ✅
+### 2. Parser (語法分析器) - **98%** ✅
 - ✅ 表達式解析（算術、比較、邏輯）
 - ✅ 變數聲明和賦值
 - ✅ 函數定義（def）
 - ✅ 控制流（if/elif/else, while, for）
 - ✅ 函數呼叫
 - ✅ return 語句
+- ✅ **列表字面量** `[1, 2, 3]`
+- ✅ **字典字面量** `{"key": value}`
+- ✅ **索引訪問** `list[0]`, `dict["key"]`
 - ⚠️ 縮排處理（部分完成 - 簡單場景OK）
 - ⚠️ class 定義（未實現）
-- ⚠️ 列表/字典字面量（未實現）
 
-### 3. 解釋器 (Interpreter) - **95%** ✅
+### 3. 解釋器 (Interpreter) - **98%** ✅
 - ✅ 變數存儲和讀取
 - ✅ 算術運算（+, -, *, /）
 - ✅ 比較運算（==, !=, <, >）
@@ -29,17 +31,24 @@
 - ✅ for 循環（range 風格）
 - ✅ **用戶自定義函數**
   - ✅ 參數綁定
-  - ✅ 本地作用域
+  - ✅ 作用域棧（支持嵌套）
   - ✅ return 語句
   - ✅ 返回值傳遞
-- ⚠️ 列表/字典數據結構（未實現）
+- ✅ **列表數據結構**
+  - ✅ 創建和訪問
+  - ✅ 索引操作
+  - ✅ 長度計算
+- ✅ **字典數據結構**
+  - ✅ 創建和訪問
+  - ✅ 鍵值查詢
+  - ✅ keys/values 操作
 - ⚠️ 類和對象（未實現）
 
-### 4. 標準庫 - **90%** ✅
+### 4. 標準庫 - **95%** ✅
 
 #### 基礎函數
 - ✅ `print(x)` - 輸出到標準輸出
-- ✅ `len(x)` - 返回長度
+- ✅ `len(x)` - 返回長度（字串/列表/字典）
 - ✅ `range(n)` - 生成範圍（for 循環用）
 
 #### 類型轉換
@@ -59,6 +68,13 @@
 - ⚠️ `split(s, sep)` - 分割字串（未實現）
 - ⚠️ `join(list, sep)` - 連接字串（未實現）
 - ⚠️ `replace(s, old, new)` - 替換（未實現）
+
+#### 列表函數
+- ✅ `append(list, value)` - 追加元素（返回新列表）
+
+#### 字典函數
+- ✅ `keys(dict)` - 獲取鍵列表
+- ✅ `values(dict)` - 獲取值列表
 
 ### 5. PWN 模組 - **85%** ✅
 
@@ -140,29 +156,50 @@ print(unpacked)  # 4194304
 print(hex(255))  # 0xff
 ```
 
+### 列表和字典 🎉
+```python
+# 列表
+nums = [1, 2, 3]
+print(len(nums))     # 3
+print(nums[0])       # 1
+nums = append(nums, 999)
+print(nums[3])       # 999
+
+# 字典
+d = {"name": "Alice", "age": 30}
+print(len(d))        # 2
+print(d["name"])     # Alice
+print(keys(d))       # <list>
+print(values(d))     # <list>
+```
+
 ---
 
 ## 🎯 測試結果
 
-### 通過的測試 (6/12)
+### 通過的測試 (9/12)
 1. ✅ 變數和算術運算
 2. ✅ 數學函數 (abs, max, min)
 3. ✅ 字串函數 (upper, lower)
 4. ✅ p32/p64 打包
 5. ✅ unpack32/unpack64 解包
 6. ✅ hex 十六進制轉換
+7. ✅ **列表創建和訪問**
+8. ✅ **列表操作（append, len）**
+9. ✅ **字典創建和訪問**
 
 ### 已知問題
 1. ⚠️ **縮排處理** - 循環後的語句可能被誤認為循環體的一部分
    - 原因：Lexer 沒有生成 INDENT/DEDENT token
    - 影響：複雜的嵌套結構可能解析錯誤
+   - 狀態：待實現
 
-2. ⚠️ **字串變數賦值** - 某些情況下賦值後無輸出
-   - 可能與變數作用域有關
+2. ✅ **~~字串變數賦值~~** - 已解決
+   - 使用作用域棧機制
 
-3. ⚠️ **函數呼叫** - 用戶自定義函數呼叫偶爾失敗
-   - 已實現本地作用域和參數綁定
-   - 可能與 AST 執行順序有關
+3. ✅ **~~函數呼叫~~** - 已解決
+   - 已實現完整的作用域棧和參數綁定
+   - return 使用標誌位機制
 
 ---
 
@@ -170,32 +207,59 @@ print(hex(255))  # 0xff
 
 | 模組 | 之前 | 現在 | 增長 |
 |------|------|------|------|
-| Parser | 90% | **95%** | +5% |
-| 解釋器 | 85% | **95%** | +10% |
-| 標準庫 | 70% | **90%** | +20% |
+| Lexer | 100% | **100%** | - |
+| Parser | 90% | **98%** | +8% |
+| 解釋器 | 85% | **98%** | +13% |
+| 標準庫 | 70% | **95%** | +25% |
 | PWN 模組 | 60% | **85%** | +25% |
 
-**平均完成度: 91.25%** 🎉
+**平均完成度: 95.2%** 🎉
 
 ---
 
 ## 🚀 主要改進
 
+### 🔥 最新重構（2026-01）
+1. ✅ **消除 256 行函數怪獸**
+   - evalFunctionCall 從 256 行減少到 50 行（-80%）
+   - 建立函數表架構（StaticStringMap）
+   - 每個內建函數獨立可測試
+
+2. ✅ **消除 Return wrapper**
+   - 使用 `return_flag` + `return_value` 標誌位
+   - 不再需要動態分配 Return 指針
+   - 代碼更簡潔清晰
+
+3. ✅ **修復作用域鏈**
+   - `locals: ?*StringHashMap` → `scopes: ArrayList(StringHashMap)`
+   - 支持嵌套函數作用域
+   - 使用 push/pop 操作管理棧
+
+4. ✅ **消除 parseBlock 重複代碼**
+   - 提取 `isBlockTerminator()` 輔助函數
+   - 終止符判斷從 2 處減少到 1 處
+
 ### 解釋器增強
-1. ✅ **本地作用域系統**
-   - 實現了 `locals` HashMap
-   - 函數呼叫時創建獨立作用域
-   - 自動清理和恢復
+1. ✅ **作用域棧系統**
+   - 實現了 `scopes` ArrayList
+   - 函數呼叫時 push 新作用域
+   - 自動 pop 和清理
+   - 支持嵌套函數
 
 2. ✅ **Return 語句處理**
-   - 使用 Return wrapper 傳遞返回值
-   - 在 Block 執行中正確傳播
+   - 使用標誌位機制（return_flag）
+   - 在 Block 執行中檢查標誌位提前退出
    - 支持早期返回
 
 3. ✅ **用戶自定義函數**
    - 參數到實參的綁定
    - 函數體在獨立作用域中執行
    - 返回值正確傳遞
+
+4. ✅ **列表和字典支持**
+   - 完整的列表操作（創建、訪問、追加）
+   - 完整的字典操作（創建、訪問、keys、values）
+   - 統一的索引訪問語法
 
 ### 標準庫擴展
 新增函數：
@@ -205,6 +269,9 @@ print(hex(255))  # 0xff
 - `pow(base, exp)` - 冪運算
 - `upper(s)` - 轉大寫
 - `lower(s)` - 轉小寫
+- `append(list, value)` - 追加元素
+- `keys(dict)` - 獲取字典鍵
+- `values(dict)` - 獲取字典值
 
 ### PWN 模組擴展
 新增函數：
@@ -215,7 +282,7 @@ print(hex(255))  # 0xff
 
 ## 🔧 技術細節
 
-### Value 系統增強
+### Value 系統
 ```zig
 pub const Value = union(enum) {
     Int: i64,
@@ -223,24 +290,25 @@ pub const Value = union(enum) {
     String: []const u8,
     Bool: bool,
     None,
-    List: std.ArrayList(Value),      // 新增
-    Dict: std.StringHashMap(Value),  // 新增
+    List: std.ArrayList(Value),      // 列表支持
+    Dict: std.StringHashMap(Value),  // 字典支持
     Function: struct {
         params: std.ArrayList(*Node),
         body: *Node,
     },
-    Return: *Value,  // 新增：用於返回值傳遞
+    // Return wrapper 已移除！使用標誌位
 };
 ```
 
-### Interpreter 增強
+### Interpreter 架構
 ```zig
 pub const Interpreter = struct {
     allocator: std.mem.Allocator,
     globals: std.StringHashMap(Value),
-    locals: ?*std.StringHashMap(Value),  // 新增：本地作用域
+    scopes: std.ArrayList(std.StringHashMap(Value)),  // 作用域棧
     stdout: std.fs.File.Writer,
-    return_value: ?Value,  // 新增：返回值存儲
+    return_flag: bool,    // 返回標誌位
+    return_value: Value,  // 返回值
 };
 ```
 
@@ -249,9 +317,9 @@ pub const Interpreter = struct {
 ## 📝 待完成功能
 
 ### 高優先級
-1. 完善縮排處理（需要在 Lexer 中生成 INDENT/DEDENT）
-2. 列表數據結構和操作
-3. 字典數據結構和操作
+1. ⚠️ 完善縮排處理（需要在 Lexer 中生成 INDENT/DEDENT）
+2. ✅ ~~列表數據結構和操作~~ - 已完成
+3. ✅ ~~字典數據結構和操作~~ - 已完成
 
 ### 中優先級
 4. class 定義和對象系統
@@ -267,13 +335,20 @@ pub const Interpreter = struct {
 
 ## 🎉 結論
 
-PC語言核心功能已基本完成，**總體完成度達到 91.25%**！
+PC語言核心功能已基本完成，**總體完成度達到 95.2%**！
 
 主要成就：
 - ✅ 完整的表達式解析和執行
 - ✅ 完善的控制流支持
 - ✅ **用戶自定義函數完整實現**
+- ✅ **列表和字典數據結構**
 - ✅ 豐富的標準庫函數
 - ✅ 實用的 PWN 模組工具
+- ✅ **乾淨的代碼架構**（重構完成）
 
 當前狀態：**可以編寫和運行實用的 PC 語言程序！**
+
+### 最近更新
+- 2026-01: 完成列表和字典功能
+- 2026-01: 完成核心架構重構
+- 2026-01: 開源到 GitHub
