@@ -26,6 +26,8 @@ pub const builtins = std.StaticStringMap(BuiltinFn).initComptime(.{
     .{ "upper", builtin_upper },
     .{ "lower", builtin_lower },
     .{ "append", builtin_append },
+    .{ "keys", builtin_keys },
+    .{ "values", builtin_values },
 });
 
 // ============================================================================
@@ -47,6 +49,7 @@ fn builtin_len(_: *Interpreter, args: []Value) InterpreterError!Value {
     return switch (args[0]) {
         .String => |s| Value{ .Int = @intCast(s.len) },
         .List => |l| Value{ .Int = @intCast(l.items.len) },
+        .Dict => |d| Value{ .Int = @intCast(d.count()) },
         else => Value{ .Int = 0 },
     };
 }
@@ -205,4 +208,28 @@ fn builtin_append(interp: *Interpreter, args: []Value) InterpreterError!Value {
     try new_list.appendSlice(args[0].List.items);
     try new_list.append(args[1]);
     return Value{ .List = new_list };
+}
+
+// keys(dict) - Return list of dictionary keys
+fn builtin_keys(interp: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0 or args[0] != .Dict) return Value.None;
+    
+    var key_list = std.ArrayList(Value).init(interp.allocator);
+    var it = args[0].Dict.keyIterator();
+    while (it.next()) |key| {
+        try key_list.append(Value{ .String = key.* });
+    }
+    return Value{ .List = key_list };
+}
+
+// values(dict) - Return list of dictionary values
+fn builtin_values(interp: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0 or args[0] != .Dict) return Value.None;
+    
+    var val_list = std.ArrayList(Value).init(interp.allocator);
+    var it = args[0].Dict.valueIterator();
+    while (it.next()) |val| {
+        try val_list.append(val.*);
+    }
+    return Value{ .List = val_list };
 }

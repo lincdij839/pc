@@ -98,6 +98,24 @@ pub const Interpreter = struct {
                 break :blk Value{ .List = list };
             },
 
+            .LiteralDict => |v| blk: {
+                var dict = std.StringHashMap(Value).init(self.allocator);
+                for (v.keys.items, v.values.items) |key_node, val_node| {
+                    const key_val = try self.eval(key_node);
+                    const val = try self.eval(val_node);
+                    
+                    // Convert key to string
+                    const key_str = switch (key_val) {
+                        .String => |s| s,
+                        .Int => |i| try std.fmt.allocPrint(self.allocator, "{}", .{i}),
+                        else => "unknown",
+                    };
+                    
+                    try dict.put(key_str, val);
+                }
+                break :blk Value{ .Dict = dict };
+            },
+
             .IndexAccess => |v| blk: {
                 const obj = try self.eval(v.object);
                 const idx = try self.eval(v.index);
@@ -106,6 +124,17 @@ pub const Interpreter = struct {
                     const index = @as(usize, @intCast(idx.Int));
                     if (index < obj.List.items.len) {
                         break :blk obj.List.items[index];
+                    }
+                } else if (obj == .Dict) {
+                    // Dict access by string key
+                    const key_str = switch (idx) {
+                        .String => |s| s,
+                        .Int => |i| try std.fmt.allocPrint(self.allocator, "{}", .{i}),
+                        else => "unknown",
+                    };
+                    
+                    if (obj.Dict.get(key_str)) |value| {
+                        break :blk value;
                     }
                 }
                 break :blk Value.None;

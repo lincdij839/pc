@@ -378,6 +378,9 @@ pub const Parser = struct {
             .LeftBracket => {
                 node = try self.parseListLiteral();
             },
+            .LeftBrace => {
+                node = try self.parseDictLiteral();
+            },
             else => {
                 std.debug.print("Unexpected token in expression: {s}\n", .{@tagName(tok.kind)});
                 return ParserError.UnexpectedToken;
@@ -409,5 +412,25 @@ pub const Parser = struct {
 
         _ = try self.expect(.RightBracket);
         return list;
+    }
+
+    fn parseDictLiteral(self: *Parser) !*Node {
+        _ = try self.expect(.LeftBrace);
+        const dict = try ast.createNode(self.allocator, .LiteralDict);
+
+        while (self.current().kind != .RightBrace and self.current().kind != .Eof) {
+            // Parse key (must be string or identifier)
+            const key = try self.parseExpression();
+            _ = try self.expect(.Colon);
+            const value = try self.parseExpression();
+            
+            try dict.LiteralDict.keys.append(key);
+            try dict.LiteralDict.values.append(value);
+            
+            if (!self.match(.Comma)) break;
+        }
+
+        _ = try self.expect(.RightBrace);
+        return dict;
     }
 };
