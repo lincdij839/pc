@@ -148,29 +148,24 @@ pub const Parser = struct {
         return node;
     }
 
+    fn isBlockTerminator(self: *Parser) bool {
+        const tok = self.current();
+        return tok.kind == .Def or 
+               tok.kind == .Class or
+               tok.kind == .Elif or
+               tok.kind == .Else or
+               tok.kind == .Eof;
+    }
+
     fn parseBlock(self: *Parser) ParserError!*Node {
         const body = try ast.createNode(self.allocator, .Block);
         
-        while (self.current().kind != .Eof) {
-            const tok = self.current();
-            
-            // Stop at block terminators
-            if (tok.kind == .Def or 
-                tok.kind == .Class or
-                tok.kind == .Elif or
-                tok.kind == .Else) {
-                break;
-            }
-            
+        while (!self.isBlockTerminator()) {
             // Handle newlines
-            if (tok.kind == .Newline) {
+            if (self.current().kind == .Newline) {
                 self.advance();
                 // If after newlines we see a terminator, stop
-                if (self.current().kind == .Def or 
-                    self.current().kind == .Class or
-                    self.current().kind == .Elif or
-                    self.current().kind == .Else or
-                    self.current().kind == .Eof) {
+                if (self.isBlockTerminator()) {
                     break;
                 }
                 continue;
