@@ -25,12 +25,18 @@ print("")
 # Extract strings
 print("[2] String Extraction:")
 strings = elf_strings(binary, 5)
-print("  Found", len(strings), "strings (showing first 5):")
-count = 0
-for s in strings:
-    if count < 5:
-        print("    -", s)
-        count = count + 1
+strings_len = len(strings)
+print("  Found", strings_len, "strings (showing first 5):")
+if strings_len > 0:
+    print("    -", strings[0])
+if strings_len > 1:
+    print("    -", strings[1])
+if strings_len > 2:
+    print("    -", strings[2])
+if strings_len > 3:
+    print("    -", strings[3])
+if strings_len > 4:
+    print("    -", strings[4])
 print("")
 
 # ============================================================================
