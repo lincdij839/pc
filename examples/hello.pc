@@ -1,0 +1,12 @@
+# PC Language - Hello World Example
+
+def main():
+    print("Hello from PC Language (Zig Implementation)!")
+    
+    name: str = "Hacker"
+    age: i32 = 25
+    
+    print(name)
+    print(age)
+
+main()

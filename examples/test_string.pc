@@ -1,0 +1,4 @@
+# Test string functions
+print(upper("hello"))
+print(lower("WORLD"))
+print(777)

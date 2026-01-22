@@ -1,0 +1,388 @@
+// PC Language Parser
+const std = @import("std");
+const Token = @import("token.zig").Token;
+const TokenKind = @import("token.zig").TokenKind;
+const ast = @import("ast.zig");
+const Node = ast.Node;
+
+pub const ParserError = error{
+    UnexpectedToken,
+    UnexpectedEof,
+    OutOfMemory,
+    Overflow,
+    InvalidCharacter,
+};
+
+pub const Parser = struct {
+    tokens: []const Token,
+    pos: usize,
+    allocator: std.mem.Allocator,
+
+    pub fn init(allocator: std.mem.Allocator, tokens: []const Token) Parser {
+        return .{
+            .tokens = tokens,
+            .pos = 0,
+            .allocator = allocator,
+        };
+    }
+
+    fn current(self: *const Parser) Token {
+        if (self.pos < self.tokens.len) {
+            return self.tokens[self.pos];
+        }
+        return self.tokens[self.tokens.len - 1]; // EOF
+    }
+
+    fn peek(self: *const Parser, offset: usize) Token {
+        const pos = self.pos + offset;
+        if (pos < self.tokens.len) {
+            return self.tokens[pos];
+        }
+        return self.tokens[self.tokens.len - 1];
+    }
+
+    fn advance(self: *Parser) void {
+        if (self.pos < self.tokens.len - 1) {
+            self.pos += 1;
+        }
+    }
+
+    fn match(self: *Parser, kind: TokenKind) bool {
+        if (self.current().kind == kind) {
+            self.advance();
+            return true;
+        }
+        return false;
+    }
+
+    fn expect(self: *Parser, kind: TokenKind) !Token {
+        const tok = self.current();
+        if (tok.kind != kind) {
+            std.debug.print("Expected {s}, got {s}\n", .{ @tagName(kind), @tagName(tok.kind) });
+            return ParserError.UnexpectedToken;
+        }
+        self.advance();
+        return tok;
+    }
+
+    fn skipNewlines(self: *Parser) void {
+        while (self.match(.Newline)) {}
+    }
+
+    pub fn parseProgram(self: *Parser) !*Node {
+        const program = try ast.createNode(self.allocator, .Program);
+
+        while (self.current().kind != .Eof) {
+            self.skipNewlines();
+            if (self.current().kind == .Eof) break;
+
+            const stmt = try self.parseStatement();
+            try program.Program.statements.append(stmt);
+
+            self.skipNewlines();
+        }
+
+        return program;
+    }
+
+    fn parseStatement(self: *Parser) !*Node {
+        return switch (self.current().kind) {
+            .Def => self.parseFunctionDef(),
+            .Return => self.parseReturn(),
+            .If => self.parseIf(),
+            .While => self.parseWhile(),
+            .For => self.parseFor(),
+            else => self.parseExpressionStatement(),
+        };
+    }
+
+    fn parseFunctionDef(self: *Parser) !*Node {
+        _ = try self.expect(.Def);
+        const name_tok = try self.expect(.Identifier);
+
+        _ = try self.expect(.LeftParen);
+        
+        // Parse parameters
+        var params = std.ArrayList(*Node).init(self.allocator);
+        while (self.current().kind != .RightParen and self.current().kind != .Eof) {
+            const param_name = try self.expect(.Identifier);
+            const param_node = try ast.createIdentifier(self.allocator, param_name.lexeme);
+            
+            // Optional type annotation for parameter
+            if (self.match(.Colon)) {
+                // Skip type for now (e.g., i32, str)
+                _ = self.advance();
+            }
+            
+            try params.append(param_node);
+            
+            if (!self.match(.Comma)) break;
+        }
+        _ = try self.expect(.RightParen);
+
+        // Optional return type
+        var return_type: ?*Node = null;
+        if (self.match(.Arrow)) {
+            // Parse return type (e.g., i32, str)
+            if (self.current().kind == .Identifier or 
+                self.current().kind == .I32 or self.current().kind == .Str) {
+                const type_tok = self.current();
+                self.advance();
+                return_type = try ast.createIdentifier(self.allocator, type_tok.lexeme);
+            }
+        }
+
+        _ = try self.expect(.Colon);
+        self.skipNewlines();
+
+        // Parse body - parse indented block
+        const body = try self.parseBlock();
+
+        const node = try self.allocator.create(Node);
+        node.* = Node{ .FunctionDef = .{
+            .name = name_tok.lexeme,
+            .params = params,
+            .return_type = return_type,
+            .body = body,
+        } };
+        return node;
+    }
+
+    fn parseBlock(self: *Parser) ParserError!*Node {
+        const body = try ast.createNode(self.allocator, .Block);
+        
+        while (self.current().kind != .Eof) {
+            const tok = self.current();
+            
+            // Stop at block terminators
+            if (tok.kind == .Def or 
+                tok.kind == .Class or
+                tok.kind == .Elif or
+                tok.kind == .Else) {
+                break;
+            }
+            
+            // Handle newlines
+            if (tok.kind == .Newline) {
+                self.advance();
+                // If after newlines we see a terminator, stop
+                if (self.current().kind == .Def or 
+                    self.current().kind == .Class or
+                    self.current().kind == .Elif or
+                    self.current().kind == .Else or
+                    self.current().kind == .Eof) {
+                    break;
+                }
+                continue;
+            }
+            
+            const stmt = try self.parseStatement();
+            try body.Block.statements.append(stmt);
+            self.skipNewlines();
+        }
+        
+        return body;
+    }
+
+    fn parseReturn(self: *Parser) !*Node {
+        _ = try self.expect(.Return);
+
+        const value = if (self.current().kind != .Newline and self.current().kind != .Eof)
+            try self.parseExpression()
+        else
+            null;
+
+        const node = try self.allocator.create(Node);
+        node.* = Node{ .ReturnStatement = .{ .value = value } };
+        return node;
+    }
+
+    fn parseIf(self: *Parser) !*Node {
+        _ = try self.expect(.If);
+        const condition = try self.parseExpression();
+        _ = try self.expect(.Colon);
+        self.skipNewlines();
+
+        // Parse then block
+        const then_branch = try self.parseBlock();
+        
+        // Check for elif/else
+        var else_branch: ?*Node = null;
+        if (self.current().kind == .Elif or self.current().kind == .Else) {
+            if (self.match(.Elif)) {
+                // elif is just another if statement
+                else_branch = try self.parseIf();
+            } else if (self.match(.Else)) {
+                _ = try self.expect(.Colon);
+                self.skipNewlines();
+                else_branch = try self.parseBlock();
+            }
+        }
+
+        const node = try self.allocator.create(Node);
+        node.* = Node{ .IfStatement = .{
+            .condition = condition,
+            .then_branch = then_branch,
+            .else_branch = else_branch,
+        } };
+        return node;
+    }
+
+    fn parseWhile(self: *Parser) !*Node {
+        _ = try self.expect(.While);
+        const condition = try self.parseExpression();
+        _ = try self.expect(.Colon);
+        self.skipNewlines();
+        
+        const body = try self.parseBlock();
+
+        const node = try self.allocator.create(Node);
+        node.* = Node{ .WhileLoop = .{
+            .condition = condition,
+            .body = body,
+        } };
+        return node;
+    }
+
+    fn parseFor(self: *Parser) !*Node {
+        _ = try self.expect(.For);
+        const iterator = try self.parsePrimary();
+        _ = try self.expect(.In);
+        const iterable = try self.parseExpression();
+        _ = try self.expect(.Colon);
+        self.skipNewlines();
+        
+        const body = try self.parseBlock();
+
+        const node = try self.allocator.create(Node);
+        node.* = Node{ .ForLoop = .{
+            .iterator = iterator,
+            .iterable = iterable,
+            .body = body,
+        } };
+        return node;
+    }
+
+    fn parseExpressionStatement(self: *Parser) !*Node {
+        const expr = try self.parseExpression();
+
+        // Check for type annotation (e.g., x: i32 = 10)
+        if (self.match(.Colon)) {
+            // Skip type annotation
+            _ = self.advance();
+            
+            // Now expect assignment
+            if (self.match(.Equal)) {
+                const value = try self.parseExpression();
+                const node = try self.allocator.create(Node);
+                node.* = Node{ .VariableDecl = .{ 
+                    .name = if (expr.* == .Identifier) expr.Identifier.name else "unknown",
+                    .type_annotation = null, // TODO: store type
+                    .initializer = value 
+                } };
+                return node;
+            }
+        }
+
+        // Check for regular assignment
+        if (self.match(.Equal)) {
+            const value = try self.parseExpression();
+            const node = try self.allocator.create(Node);
+            node.* = Node{ .Assignment = .{ .target = expr, .value = value } };
+            return node;
+        }
+
+        return expr;
+    }
+
+    fn parseExpression(self: *Parser) ParserError!*Node {
+        return try self.parseBinaryOp();
+    }
+
+    fn parseBinaryOp(self: *Parser) ParserError!*Node {
+        var left = try self.parsePrimary();
+
+        while (true) {
+            const tok = self.current();
+            const is_operator = tok.kind == .Plus or tok.kind == .Minus or
+                tok.kind == .Star or tok.kind == .Slash or
+                tok.kind == .EqualEqual or tok.kind == .NotEqual or
+                tok.kind == .Less or tok.kind == .Greater;
+
+            if (!is_operator) break;
+
+            // Get the operator as a string
+            const op_str = switch (tok.kind) {
+                .Plus => "+",
+                .Minus => "-",
+                .Star => "*",
+                .Slash => "/",
+                .EqualEqual => "==",
+                .NotEqual => "!=",
+                .Less => "<",
+                .Greater => ">",
+                else => "?",
+            };
+
+            self.advance();
+            const right = try self.parsePrimary();
+            left = try ast.createBinaryOp(self.allocator, op_str, left, right);
+        }
+
+        return left;
+    }
+
+    fn parsePrimary(self: *Parser) ParserError!*Node {
+        const tok = self.current();
+
+        switch (tok.kind) {
+            .Integer => {
+                self.advance();
+                const value = try std.fmt.parseInt(i64, tok.lexeme, 10);
+                return try ast.createInt(self.allocator, value);
+            },
+            .String => {
+                self.advance();
+                const node = try self.allocator.create(Node);
+                node.* = Node{ .LiteralString = .{ .value = tok.lexeme } };
+                return node;
+            },
+            .True, .False => {
+                self.advance();
+                const node = try self.allocator.create(Node);
+                node.* = Node{ .LiteralBool = .{ .value = (tok.kind == .True) } };
+                return node;
+            },
+            .Identifier => {
+                self.advance();
+                // Check for function call
+                if (self.current().kind == .LeftParen) {
+                    _ = try self.expect(.LeftParen);
+                    const call = try ast.createFunctionCall(self.allocator, try ast.createIdentifier(self.allocator, tok.lexeme));
+
+                    // Parse arguments
+                    while (self.current().kind != .RightParen) {
+                        const arg = self.parseExpression() catch |err| return err;
+                        try call.FunctionCall.arguments.append(arg);
+
+                        if (!self.match(.Comma)) break;
+                    }
+
+                    _ = try self.expect(.RightParen);
+                    return call;
+                }
+                return try ast.createIdentifier(self.allocator, tok.lexeme);
+            },
+            .LeftParen => {
+                _ = try self.expect(.LeftParen);
+                const expr = try self.parseExpression();
+                _ = try self.expect(.RightParen);
+                return expr;
+            },
+            else => {
+                std.debug.print("Unexpected token in expression: {s}\n", .{@tagName(tok.kind)});
+                return ParserError.UnexpectedToken;
+            },
+        }
+    }
+};
