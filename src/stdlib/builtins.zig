@@ -8,6 +8,8 @@ const network = @import("network.zig");
 const autoexploit = @import("autoexploit.zig");
 const crypto = @import("crypto.zig");
 const string_utils = @import("string_utils.zig");
+const web = @import("web.zig");
+const forensics = @import("forensics.zig");
 
 // Function signature for all built-in functions
 pub const BuiltinFn = *const fn (*Interpreter, []Value) InterpreterError!Value;
@@ -99,6 +101,27 @@ pub const builtins = std.StaticStringMap(BuiltinFn).initComptime(.{
     .{ "bin", string_utils.builtin_bin },
     .{ "oct", string_utils.builtin_oct },
     .{ "unhex", string_utils.builtin_unhex },
+    // Web exploitation
+    .{ "http_get", web.builtin_http_get },
+    .{ "http_post", web.builtin_http_post },
+    .{ "sqli_union", web.builtin_sqli_union },
+    .{ "sqli_time_based", web.builtin_sqli_time_based },
+    .{ "sqli_error_based", web.builtin_sqli_error_based },
+    .{ "xss_basic", web.builtin_xss_basic },
+    .{ "xss_img_onerror", web.builtin_xss_img_onerror },
+    .{ "xss_svg_onload", web.builtin_xss_svg_onload },
+    .{ "lfi_linux", web.builtin_lfi_linux },
+    .{ "lfi_php_wrapper", web.builtin_lfi_php_wrapper },
+    .{ "url_encode", web.builtin_url_encode },
+    .{ "url_decode", web.builtin_url_decode },
+    // Forensics & Analysis
+    .{ "detect_filetype", forensics.builtin_detect_filetype },
+    .{ "get_magic_bytes", forensics.builtin_get_magic_bytes },
+    .{ "strings_extract", forensics.builtin_strings_extract },
+    .{ "hex_dump", forensics.builtin_hex_dump },
+    .{ "extract_zip", forensics.builtin_extract_zip },
+    .{ "extract_lsb", forensics.builtin_extract_lsb },
+    .{ "parse_pcap", forensics.builtin_parse_pcap },
 });
 
 // ============================================================================
