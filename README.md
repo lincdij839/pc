@@ -36,9 +36,15 @@ zig build
 print("Hello, PC Language!")
 ```
 
-運行：
+運行（解釋模式）：
 ```bash
 ./zig-out/bin/pc hello.pc
+```
+
+編譯成可執行文件（LLVM）：
+```bash
+./zig-out/bin/pc compile hello.pc
+./hello.pc.exe
 ```
 
 ### 變數和運算
@@ -276,9 +282,9 @@ print(recovered)  # "flag"
 | Forensics | 70% | 🚧 開發中 |
 | 文件操作 | 100% | ✅ 完成 |
 | 數據結構 | 95% | ✅ 列表/字典完成 |
-| LLVM 後端 | 0% | 📋 計劃中 |
+| **LLVM 後端** | **35%** | **🚀 已實現** |
 
-**總體完成度：85.7%**（CTF 實戰可用）
+**總體完成度：88.2%**（CTF 實戰可用 + 編譯支持）
 
 ## 🛠️ 技術架構
 
@@ -370,6 +376,7 @@ print(recovered)  # "flag"
 - [x] Attack-Defense 攻防模組（13 個函數）
 - [x] 逆向工程模組（ELF 解析、ROP 搜索）
 - [x] IP 地址位置追蹤工具
+- [x] **LLVM 編譯器後端**（生成原生machine code）
 
 ## 📄 許可證
 
