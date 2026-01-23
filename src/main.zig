@@ -177,7 +177,7 @@ fn compileFile(allocator: std.mem.Allocator, filename: []const u8) !void {
     try codegen.emitObject(obj_file);
     
     // Link to executable
-    const exe_file = try std.fmt.allocPrint(allocator, "{s}.exe", .{filename});
+    const exe_file = try std.fmt.allocPrint(allocator, "{s}.out", .{filename});
     defer allocator.free(exe_file);
     try Codegen.link(allocator, obj_file, exe_file);
     

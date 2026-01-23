@@ -44,7 +44,7 @@ print("Hello, PC Language!")
 編譯成可執行文件（LLVM）：
 ```bash
 ./zig-out/bin/pc compile hello.pc
-./hello.pc.exe
+./hello.pc.out
 ```
 
 ### 變數和運算
