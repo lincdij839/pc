@@ -1,0 +1,60 @@
+# PC Language - 批量命令执行工具
+
+print("=" * 70)
+print("⚡ 批量命令执行工具")
+print("=" * 70)
+print("")
+
+# ========================================
+# 在这里修改命令和系统
+command = "free -h"
+system = "all"
+# 可选: all, ubuntu, debian, fedora, arch, kali
+# ========================================
+
+print("执行命令: " + command)
+print("目标系统: " + system)
+print("")
+
+# 所有系统
+if system == "all":
+    print("1️⃣  本机 Ubuntu:")
+    print(exec("sh", ["-c", command]))
+    
+    print("2️⃣  Debian:")
+    print(exec("lxc", ["exec", "my-debian", "--", "sh", "-c", command]))
+    
+    print("3️⃣  Fedora:")
+    print(exec("lxc", ["exec", "my-fedora", "--", "sh", "-c", command]))
+    
+    print("4️⃣  Arch:")
+    print(exec("lxc", ["exec", "my-arch", "--", "sh", "-c", command]))
+    
+    print("5️⃣  Kali:")
+    print(exec("lxc", ["exec", "my-kali", "--", "sh", "-c", command]))
+
+# 单个系统
+if system == "ubuntu":
+    print("1️⃣  本机 Ubuntu:")
+    print(exec("sh", ["-c", command]))
+
+if system == "debian":
+    print("2️⃣  Debian:")
+    print(exec("lxc", ["exec", "my-debian", "--", "sh", "-c", command]))
+
+if system == "fedora":
+    print("3️⃣  Fedora:")
+    print(exec("lxc", ["exec", "my-fedora", "--", "sh", "-c", command]))
+
+if system == "arch":
+    print("4️⃣  Arch:")
+    print(exec("lxc", ["exec", "my-arch", "--", "sh", "-c", command]))
+
+if system == "kali":
+    print("5️⃣  Kali:")
+    print(exec("lxc", ["exec", "my-kali", "--", "sh", "-c", command]))
+
+print("")
+print("=" * 70)
+print("✅ 完成")
+print("=" * 70)
