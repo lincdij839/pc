@@ -1,0 +1,23 @@
+# 变量和运算示例
+
+# 数字运算
+x = 10
+y = 20
+sum = x + y
+diff = y - x
+product = x * y
+quotient = y / x
+
+print("x = " + str(x))
+print("y = " + str(y))
+print("sum = " + str(sum))
+print("diff = " + str(diff))
+print("product = " + str(product))
+print("quotient = " + str(quotient))
+
+# 字符串操作
+name = "PC Language"
+version = "0.2.0"
+message = name + " v" + version
+
+print(message)

@@ -1,0 +1,17 @@
+; PC Language IR Module
+
+function main() {
+block_0:
+  store %0, 10
+  %1 = load %0
+  %2 = gt %1, 5
+  branch %2, label_0, label_2
+block_1:
+label_0:
+  store %3, 20
+  jump label_2
+block_2:
+label_2:
+  ret 0
+}
+

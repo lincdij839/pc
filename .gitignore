@@ -1,0 +1,35 @@
+# Zig build artifacts
+zig-cache/
+.zig-cache/
+zig-out/
+
+# Local Zig installation
+zig-local/
+
+# Build files
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+/tmp/
+*.log
+
+# Downloads
+*.tar.xz
+*.tar.gz
+*.zip

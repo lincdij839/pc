@@ -1,0 +1,8 @@
+; PC Language IR Module
+
+function main() {
+block_0:
+  ret 0
+}
+
+function add(

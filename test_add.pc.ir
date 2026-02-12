@@ -1,0 +1,9 @@
+; PC Language IR Module
+
+function main() {
+block_0:
+  %0 = add 10, 20
+  store %1, %0
+  ret 0
+}
+

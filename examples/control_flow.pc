@@ -1,0 +1,22 @@
+# 控制流示例
+
+# 条件语句
+x = 15
+
+if x > 10:
+    print("x is greater than 10")
+else:
+    print("x is less than or equal to 10")
+
+# For 循环
+print("\nCounting from 0 to 9:")
+for i in range(10):
+    print(i)
+
+# While 循环
+print("\nCountdown:")
+count = 5
+while count > 0:
+    print(count)
+    count = count - 1
+print("Done!")

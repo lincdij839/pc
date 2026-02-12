@@ -1,0 +1,22 @@
+# 列表示例
+
+# 创建列表
+numbers = [1, 2, 3, 4, 5]
+names = ["Alice", "Bob", "Charlie"]
+
+# 访问元素
+print("First number: " + str(numbers[0]))
+print("First name: " + names[0])
+
+# 遍历列表
+print("\nAll numbers:")
+for num in numbers:
+    print(num)
+
+print("\nAll names:")
+for name in names:
+    print(name)
+
+# 列表长度
+print("\nLength of numbers: " + str(len(numbers)))
+print("Length of names: " + str(len(names)))

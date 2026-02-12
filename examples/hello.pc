@@ -1,0 +1,4 @@
+# Hello World 示例
+
+print("Hello, World!")
+print("Welcome to PC Language!")
