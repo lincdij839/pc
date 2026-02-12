@@ -1,0 +1,33 @@
+# PC Language - Linux Package Management Demo
+# 演示包管理器统一接口
+
+print("=" * 60)
+print("PC Language - Package Management Demo")
+print("=" * 60)
+print("")
+
+# 检测系统
+print("[System Detection]")
+print("Distribution: " + distro())
+print("Version: " + distro_version())
+print("Package Manager: " + pkg_manager())
+print("")
+
+# 搜索软件包
+print("[Package Search]")
+print("Searching for 'curl'...")
+result = pkg_search("curl")
+print(result)
+print("")
+
+# 获取软件包信息
+print("[Package Info]")
+print("Getting info for 'curl'...")
+info = pkg_info("curl")
+print(info)
+print("")
+
+print("=" * 60)
+print("Demo completed!")
+print("Note: Install/remove operations require sudo privileges")
+print("=" * 60)

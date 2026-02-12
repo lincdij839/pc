@@ -1,0 +1,46 @@
+# PC Language - Linux System Information Demo
+# 展示 Linux 系统互联功能
+
+print("=" * 60)
+print("PC Language - Linux System Information")
+print("=" * 60)
+print("")
+
+# 系统信息
+print("[System Information]")
+print("OS Name: " + os_name())
+print("Architecture: " + arch())
+print("Distribution: " + distro())
+print("Version: " + distro_version())
+print("Package Manager: " + pkg_manager())
+print("Current Directory: " + cwd())
+print("Timestamp: " + str(timestamp()))
+print("")
+
+# 环境变量
+print("[Environment]")
+print("HOME: " + getenv("HOME"))
+print("USER: " + getenv("USER"))
+print("SHELL: " + getenv("SHELL"))
+print("PATH: " + getenv("PATH"))
+print("")
+
+# 文件系统
+print("[Filesystem]")
+print("Checking /etc/hosts...")
+if file_exists("/etc/hosts"):
+    size = file_size("/etc/hosts")
+    print("  File exists, size: " + str(size) + " bytes")
+else:
+    print("  File not found")
+print("")
+
+# 列出目录
+print("[Directory Listing: /tmp]")
+files = list_dir("/tmp")
+print("Found " + str(len(files)) + " items")
+print("")
+
+print("=" * 60)
+print("Demo completed!")
+print("=" * 60)

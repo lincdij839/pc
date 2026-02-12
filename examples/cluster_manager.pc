@@ -1,0 +1,181 @@
+# PC Language - 集群管理器
+# Cluster Manager - 管理多个 Linux 系统
+
+print("=" * 70)
+print("PC Language 集群管理器 / Cluster Manager")
+print("=" * 70)
+print("")
+
+# 定义集群节点（需要根据实际情况修改）
+# Define cluster nodes (modify according to actual setup)
+print("[集群配置 / Cluster Configuration]")
+print("配置集群节点...")
+print("Configuring cluster nodes...")
+print("")
+
+# 节点列表示例
+# Example node list
+nodes = [
+    "user@node1.example.com",
+    "user@node2.example.com",
+    "user@node3.example.com"
+]
+
+# 或者使用本地测试
+# Or use local testing
+test_mode = true
+
+if test_mode:
+    print("⚠️  测试模式：使用本地连接")
+    print("⚠️  Test Mode: Using local connection")
+    nodes = ["yuan@localhost"]
+    print("")
+
+# 连接到所有节点
+# Connect to all nodes
+print("[连接节点 / Connecting to Nodes]")
+connections = []
+connected_count = 0
+
+for node in nodes:
+    print("连接到 / Connecting to: " + node)
+    conn = ssh_connect(node, "yuan")
+    
+    if conn:
+        print("  ✓ 成功 / Success")
+        connections = append(connections, conn)
+        connected_count = connected_count + 1
+    else:
+        print("  ✗ 失败 / Failed")
+
+print("")
+print("成功连接 / Successfully connected: " + str(connected_count) + "/" + str(len(nodes)))
+print("")
+
+if connected_count == 0:
+    print("没有可用的节点连接")
+    print("No available node connections")
+else:
+    # 收集所有节点的系统信息
+    # Collect system information from all nodes
+    print("=" * 70)
+    print("[集群状态 / Cluster Status]")
+    print("=" * 70)
+    print("")
+    
+    node_index = 0
+    for conn in connections:
+        node_index = node_index + 1
+        print("节点 / Node " + str(node_index) + ": " + str(conn))
+        print("-" * 70)
+        
+        # 系统信息
+        # System information
+        distro = remote_distro(conn)
+        hostname = ssh_exec(conn, "hostname")
+        kernel = ssh_exec(conn, "uname -r")
+        
+        print("  主机名 / Hostname: " + hostname)
+        print("  发行版 / Distribution: " + distro)
+        print("  内核 / Kernel: " + kernel)
+        
+        # 资源使用
+        # Resource usage
+        cpu = ssh_exec(conn, "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1")
+        mem = ssh_exec(conn, "free | grep Mem | awk '{printf \"%.1f\", $3/$2 * 100.0}'")
+        disk = ssh_exec(conn, "df -h / | tail -1 | awk '{print $5}' | tr -d '%'")
+        
+        print("  CPU 使用率 / CPU Usage: " + cpu + "%")
+        print("  内存使用率 / Memory Usage: " + mem + "%")
+        print("  磁盘使用率 / Disk Usage: " + disk + "%")
+        
+        # 运行时间
+        # Uptime
+        uptime = ssh_exec(conn, "uptime -p")
+        print("  运行时间 / Uptime: " + uptime)
+        
+        print("")
+    
+    # 批量操作示例
+    # Batch operation example
+    print("=" * 70)
+    print("[批量操作 / Batch Operations]")
+    print("=" * 70)
+    print("")
+    
+    print("在所有节点上执行命令...")
+    print("Executing command on all nodes...")
+    print("命令 / Command: date")
+    print("")
+    
+    node_index = 0
+    for conn in connections:
+        node_index = node_index + 1
+        result = ssh_exec(conn, "date")
+        print("节点 / Node " + str(node_index) + ": " + result)
+    
+    print("")
+    
+    # 文件分发示例
+    # File distribution example
+    print("=" * 70)
+    print("[文件分发 / File Distribution]")
+    print("=" * 70)
+    print("")
+    
+    print("创建配置文件...")
+    print("Creating configuration file...")
+    config_content = "# PC Language Cluster Config\ncluster_name=pc-cluster\nversion=1.0\n"
+    write_file("cluster_config.txt", config_content)
+    
+    print("分发到所有节点...")
+    print("Distributing to all nodes...")
+    print("")
+    
+    node_index = 0
+    success_count = 0
+    for conn in connections:
+        node_index = node_index + 1
+        print("节点 / Node " + str(node_index) + ": ", end="")
+        
+        success = ssh_copy(conn, "cluster_config.txt", "/tmp/cluster_config.txt")
+        if success:
+            print("✓ 成功 / Success")
+            success_count = success_count + 1
+        else:
+            print("✗ 失败 / Failed")
+    
+    print("")
+    print("分发完成 / Distribution completed: " + str(success_count) + "/" + str(len(connections)))
+    
+    # 健康检查
+    # Health check
+    print("")
+    print("=" * 70)
+    print("[健康检查 / Health Check]")
+    print("=" * 70)
+    print("")
+    
+    node_index = 0
+    healthy_count = 0
+    for conn in connections:
+        node_index = node_index + 1
+        print("节点 / Node " + str(node_index) + ": ", end="")
+        
+        # 检查关键服务
+        # Check critical services
+        ssh_status = ssh_exec(conn, "systemctl is-active sshd 2>/dev/null || echo inactive")
+        
+        if ssh_status == "active":
+            print("✓ 健康 / Healthy")
+            healthy_count = healthy_count + 1
+        else:
+            print("⚠️  警告 / Warning - SSH 服务异常")
+    
+    print("")
+    print("健康节点 / Healthy nodes: " + str(healthy_count) + "/" + str(len(connections)))
+    
+    print("")
+    print("=" * 70)
+    print("集群管理完成！/ Cluster Management Completed!")
+    print("=" * 70)

@@ -1,0 +1,33 @@
+# PC Language - Linux Service Management Demo
+# 演示 systemd 服务管理
+
+print("=" * 60)
+print("PC Language - Service Management Demo")
+print("=" * 60)
+print("")
+
+# 检查服务状态
+print("[Service Status Check]")
+services = ["ssh", "cron", "systemd-journald"]
+
+for i in range(len(services)):
+    service = services[i]
+    status = service_status(service)
+    enabled = service_is_enabled(service)
+    
+    print(service + ":")
+    print("  Status: " + status)
+    print("  Enabled: " + str(enabled))
+    print("")
+
+# 列出所有服务
+print("[All Services]")
+print("Listing all services...")
+all_services = service_list()
+print(all_services)
+print("")
+
+print("=" * 60)
+print("Demo completed!")
+print("Note: Start/stop operations require sudo privileges")
+print("=" * 60)

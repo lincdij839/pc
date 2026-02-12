@@ -1,0 +1,95 @@
+# PC Language - 多系统互联示例
+# Multi-System Connection Example
+
+print("=" * 60)
+print("PC Language - 多系统互联演示")
+print("Multi-System Interconnection Demo")
+print("=" * 60)
+print("")
+
+# 配置远程系统列表
+# Configure remote systems
+print("[配置远程系统 / Configure Remote Systems]")
+print("注意：需要先配置 SSH 密钥认证")
+print("Note: SSH key authentication must be configured first")
+print("")
+
+# 示例：连接到远程 Ubuntu 服务器
+# Example: Connect to remote Ubuntu server
+print("[连接远程系统 / Connect to Remote System]")
+print("尝试连接到 user@remote-host...")
+print("Attempting to connect to user@remote-host...")
+
+# 连接到远程系统（需要替换为实际的主机和用户名）
+# Connect to remote system (replace with actual host and username)
+conn = ssh_connect("localhost", "yuan")
+
+if conn:
+    print("✓ 连接成功！/ Connected successfully!")
+    print("连接ID / Connection ID: " + str(conn))
+    print("")
+    
+    # 获取远程系统信息
+    # Get remote system information
+    print("[远程系统信息 / Remote System Information]")
+    distro = remote_distro(conn)
+    print("远程发行版 / Remote Distro: " + distro)
+    
+    # 执行远程命令
+    # Execute remote command
+    print("")
+    print("[执行远程命令 / Execute Remote Command]")
+    hostname = ssh_exec(conn, "hostname")
+    print("远程主机名 / Remote Hostname: " + hostname)
+    
+    uptime = ssh_exec(conn, "uptime")
+    print("系统运行时间 / System Uptime: " + uptime)
+    
+    # 检查远程系统资源
+    # Check remote system resources
+    print("")
+    print("[系统资源 / System Resources]")
+    mem = ssh_exec(conn, "free -h | grep Mem | awk '{print $3\"/\"$2}'")
+    print("内存使用 / Memory Usage: " + mem)
+    
+    disk = ssh_exec(conn, "df -h / | tail -1 | awk '{print $3\"/\"$2\" (\"$5\")'")
+    print("磁盘使用 / Disk Usage: " + disk)
+    
+    # 文件传输示例
+    # File transfer example
+    print("")
+    print("[文件传输 / File Transfer]")
+    print("创建测试文件...")
+    print("Creating test file...")
+    write_file("test_remote.txt", "Hello from PC Language!")
+    
+    print("上传文件到远程系统...")
+    print("Uploading file to remote system...")
+    success = ssh_copy(conn, "test_remote.txt", "/tmp/test_remote.txt")
+    
+    if success:
+        print("✓ 文件上传成功！/ File uploaded successfully!")
+        
+        # 验证文件
+        # Verify file
+        content = ssh_exec(conn, "cat /tmp/test_remote.txt")
+        print("远程文件内容 / Remote file content: " + content)
+    else:
+        print("✗ 文件上传失败 / File upload failed")
+    
+    print("")
+    print("=" * 60)
+    print("多系统互联演示完成！")
+    print("Multi-System Interconnection Demo Completed!")
+    print("=" * 60)
+else:
+    print("✗ 连接失败 / Connection failed")
+    print("")
+    print("请确保：/ Please ensure:")
+    print("1. SSH 服务正在运行 / SSH service is running")
+    print("2. 已配置 SSH 密钥认证 / SSH key authentication is configured")
+    print("3. 主机名和用户名正确 / Hostname and username are correct")
+    print("")
+    print("配置 SSH 密钥认证：/ Configure SSH key authentication:")
+    print("  ssh-keygen -t rsa")
+    print("  ssh-copy-id user@remote-host")
