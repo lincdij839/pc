@@ -431,44 +431,81 @@ pub const Parser = struct {
         }
 
         // Handle index/slice access: list[0] or list[1:5]
-        while (self.current().kind == .LeftBracket) {
-            _ = try self.expect(.LeftBracket);
-            
-            // Check if this is a slice (has colon)
-            var is_slice = false;
-            var start_expr: ?*Node = null;
-            var end_expr: ?*Node = null;
-            
-            // Parse start (or index if not a slice)
-            if (self.current().kind != .Colon) {
-                start_expr = try self.parseExpression();
-            }
-            
-            // Check for colon (slice syntax)
-            if (self.match(.Colon)) {
-                is_slice = true;
-                // Parse end if present
-                if (self.current().kind != .RightBracket) {
-                    end_expr = try self.parseExpression();
+        // Handle member access: s.upper()
+        while (self.current().kind == .LeftBracket or self.current().kind == .Dot) {
+            if (self.match(.Dot)) {
+                // Member access
+                const member_tok = try self.expect(.Identifier);
+                
+                // Check if this is a method call
+                if (self.current().kind == .LeftParen) {
+                    _ = try self.expect(.LeftParen);
+                    
+                    // Create member access node
+                    const member_node = try self.allocator.create(Node);
+                    member_node.* = Node{ .MemberAccess = .{ 
+                        .object = node, 
+                        .member = member_tok.lexeme,
+                    } };
+                    
+                    // Create function call with member access as callee
+                    const call = try ast.createFunctionCall(self.allocator, member_node);
+                    
+                    // Parse arguments
+                    while (self.current().kind != .RightParen) {
+                        const arg = self.parseExpression() catch |err| return err;
+                        try call.FunctionCall.arguments.append(arg);
+                        if (!self.match(.Comma)) break;
+                    }
+                    
+                    _ = try self.expect(.RightParen);
+                    node = call;
+                } else {
+                    // Property access (not implemented yet, treat as member access)
+                    const member_node = try self.allocator.create(Node);
+                    member_node.* = Node{ .MemberAccess = .{ 
+                        .object = node, 
+                        .member = member_tok.lexeme,
+                    } };
+                    node = member_node;
                 }
+            } else if (self.match(.LeftBracket)) {
+                // Index or slice access
+                var is_slice = false;
+                var start_expr: ?*Node = null;
+                var end_expr: ?*Node = null;
+                
+                // Parse start (or index if not a slice)
+                if (self.current().kind != .Colon) {
+                    start_expr = try self.parseExpression();
+                }
+                
+                // Check for colon (slice syntax)
+                if (self.match(.Colon)) {
+                    is_slice = true;
+                    // Parse end if present
+                    if (self.current().kind != .RightBracket) {
+                        end_expr = try self.parseExpression();
+                    }
+                }
+                
+                _ = try self.expect(.RightBracket);
+                
+                const access_node = try self.allocator.create(Node);
+                if (is_slice) {
+                    access_node.* = Node{ .SliceAccess = .{ 
+                        .object = node, 
+                        .start = start_expr,
+                        .end = end_expr,
+                    } };
+                } else {
+                    access_node.* = Node{ .IndexAccess = .{ 
+                        .object = node, 
+                        .index = start_expr.?,
+                    } };
+                }
+                node = access_node;
             }
-            
-            _ = try self.expect(.RightBracket);
-            
-            const access_node = try self.allocator.create(Node);
-            if (is_slice) {
-                access_node.* = Node{ .SliceAccess = .{ 
-                    .object = node, 
-                    .start = start_expr,
-                    .end = end_expr,
-                } };
-            } else {
-                access_node.* = Node{ .IndexAccess = .{ 
-                    .object = node, 
-                    .index = start_expr.?,
-                } };
-            }
-            node = access_node;
         }
 
         return node;

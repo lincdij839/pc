@@ -1,0 +1,41 @@
+# PC Language - String Methods Examples
+
+# Basic string
+s = "Hello, World!"
+print("Original:", s)
+
+# upper() and lower()
+print("upper():", s.upper())
+print("lower():", s.lower())
+
+# split()
+words = s.split(" ")
+print("split(' '):", words)
+
+parts = s.split(",")
+print("split(','):", parts)
+
+# strip()
+padded = "  hello  "
+print("Original with spaces: '" + padded + "'")
+print("strip():", "'" + padded.strip() + "'")
+
+# startswith() and endswith()
+print("startswith('Hello'):", s.startswith("Hello"))
+print("startswith('World'):", s.startswith("World"))
+print("endswith('!'):", s.endswith("!"))
+print("endswith('?'):", s.endswith("?"))
+
+# replace()
+print("replace('World', 'Python'):", s.replace("World", "Python"))
+print("replace('o', '0'):", s.replace("o", "0"))
+
+# Chaining methods
+text = "  HELLO WORLD  "
+result = text.strip().lower()
+print("\nChaining: text.strip().lower():", result)
+
+# Using with variables
+greeting = "hello"
+print("\ngreeting.upper():", greeting.upper())
+print("greeting.replace('l', 'L'):", greeting.replace("l", "L"))

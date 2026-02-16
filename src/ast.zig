@@ -32,6 +32,7 @@ pub const NodeKind = enum {
     LiteralDict,
     IndexAccess,
     SliceAccess,
+    MemberAccess,
     Block,
 };
 
@@ -130,6 +131,10 @@ pub const Node = union(NodeKind) {
         object: *Node,
         start: ?*Node,  // null means start from beginning
         end: ?*Node,    // null means go to end
+    },
+    MemberAccess: struct {
+        object: *Node,
+        member: []const u8,
     },
     Block: struct {
         statements: std.ArrayList(*Node),
@@ -281,6 +286,9 @@ pub fn freeNode(allocator: std.mem.Allocator, node: *Node) void {
             freeNode(allocator, v.object);
             if (v.start) |start| freeNode(allocator, start);
             if (v.end) |end| freeNode(allocator, end);
+        },
+        .MemberAccess => |v| {
+            freeNode(allocator, v.object);
         },
         .Block => |v| {
             for (v.statements.items) |stmt| {

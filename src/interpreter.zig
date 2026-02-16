@@ -205,6 +205,13 @@ pub const Interpreter = struct {
                 break :blk Value.None;
             },
 
+            .MemberAccess => |v| blk: {
+                // For now, just return a marker that this is a member access
+                // The actual method call will be handled in FunctionCall
+                _ = v;
+                break :blk Value.None;
+            },
+
             .Identifier => |v| blk: {
                 // Lookup from innermost scope to outermost
                 if (self.scopes.items.len > 0) {
@@ -451,6 +458,41 @@ pub const Interpreter = struct {
     }
 
     fn evalFunctionCall(self: *Interpreter, callee: *Node, arguments: std.ArrayList(*Node)) !Value {
+        // Check if this is a method call (callee is MemberAccess)
+        if (callee.* == .MemberAccess) {
+            const member_access = callee.MemberAccess;
+            const obj = try self.eval(member_access.object);
+            const method_name = member_access.member;
+            
+            // Evaluate all arguments
+            var eval_args = std.ArrayList(Value).init(self.allocator);
+            defer eval_args.deinit();
+            for (arguments.items) |arg| {
+                try eval_args.append(try self.eval(arg));
+            }
+            
+            // Handle string methods
+            if (obj == .String) {
+                return try self.callStringMethod(obj.String, method_name, eval_args.items);
+            }
+            
+            // Handle list methods
+            if (obj == .List) {
+                // For list methods, we need mutable access
+                // Since obj is a copy, we can't modify the original
+                // For now, return None - list methods need special handling
+                return Value.None;
+            }
+            
+            // Handle dict methods
+            if (obj == .Dict) {
+                // Similar issue with dict methods
+                return Value.None;
+            }
+            
+            return Value.None;
+        }
+        
         // Get function name
         if (callee.* != .Identifier) return Value.None;
         const name = callee.Identifier.name;
@@ -474,6 +516,84 @@ pub const Interpreter = struct {
             }
         }
 
+        return Value.None;
+    }
+
+    fn callStringMethod(self: *Interpreter, str: []const u8, method: []const u8, args: []Value) !Value {
+        if (std.mem.eql(u8, method, "upper")) {
+            var result = try self.arena.allocator().alloc(u8, str.len);
+            for (str, 0..) |c, i| {
+                result[i] = std.ascii.toUpper(c);
+            }
+            return Value{ .String = result };
+        }
+        
+        if (std.mem.eql(u8, method, "lower")) {
+            var result = try self.arena.allocator().alloc(u8, str.len);
+            for (str, 0..) |c, i| {
+                result[i] = std.ascii.toLower(c);
+            }
+            return Value{ .String = result };
+        }
+        
+        if (std.mem.eql(u8, method, "split")) {
+            const delimiter = if (args.len > 0 and args[0] == .String) 
+                args[0].String 
+            else 
+                " ";
+            
+            var result = std.ArrayList(Value).init(self.allocator);
+            var iter = std.mem.splitSequence(u8, str, delimiter);
+            while (iter.next()) |part| {
+                const part_copy = try self.arena.allocator().dupe(u8, part);
+                try result.append(Value{ .String = part_copy });
+            }
+            return Value{ .List = result };
+        }
+        
+        if (std.mem.eql(u8, method, "strip")) {
+            const trimmed = std.mem.trim(u8, str, " \t\n\r");
+            return Value{ .String = try self.arena.allocator().dupe(u8, trimmed) };
+        }
+        
+        if (std.mem.eql(u8, method, "startswith")) {
+            if (args.len > 0 and args[0] == .String) {
+                const prefix = args[0].String;
+                return Value{ .Bool = std.mem.startsWith(u8, str, prefix) };
+            }
+            return Value{ .Bool = false };
+        }
+        
+        if (std.mem.eql(u8, method, "endswith")) {
+            if (args.len > 0 and args[0] == .String) {
+                const suffix = args[0].String;
+                return Value{ .Bool = std.mem.endsWith(u8, str, suffix) };
+            }
+            return Value{ .Bool = false };
+        }
+        
+        if (std.mem.eql(u8, method, "replace")) {
+            if (args.len >= 2 and args[0] == .String and args[1] == .String) {
+                const old = args[0].String;
+                const new = args[1].String;
+                
+                // Simple replace implementation
+                var result = std.ArrayList(u8).init(self.arena.allocator());
+                var i: usize = 0;
+                while (i < str.len) {
+                    if (i + old.len <= str.len and std.mem.eql(u8, str[i..i+old.len], old)) {
+                        try result.appendSlice(new);
+                        i += old.len;
+                    } else {
+                        try result.append(str[i]);
+                        i += 1;
+                    }
+                }
+                return Value{ .String = try result.toOwnedSlice() };
+            }
+            return Value{ .String = try self.arena.allocator().dupe(u8, str) };
+        }
+        
         return Value.None;
     }
 
