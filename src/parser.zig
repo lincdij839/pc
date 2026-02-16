@@ -430,13 +430,44 @@ pub const Parser = struct {
             },
         }
 
-        // Handle index access: list[0]
+        // Handle index/slice access: list[0] or list[1:5]
         while (self.current().kind == .LeftBracket) {
             _ = try self.expect(.LeftBracket);
-            const index = try self.parseExpression();
+            
+            // Check if this is a slice (has colon)
+            var is_slice = false;
+            var start_expr: ?*Node = null;
+            var end_expr: ?*Node = null;
+            
+            // Parse start (or index if not a slice)
+            if (self.current().kind != .Colon) {
+                start_expr = try self.parseExpression();
+            }
+            
+            // Check for colon (slice syntax)
+            if (self.match(.Colon)) {
+                is_slice = true;
+                // Parse end if present
+                if (self.current().kind != .RightBracket) {
+                    end_expr = try self.parseExpression();
+                }
+            }
+            
             _ = try self.expect(.RightBracket);
+            
             const access_node = try self.allocator.create(Node);
-            access_node.* = Node{ .IndexAccess = .{ .object = node, .index = index } };
+            if (is_slice) {
+                access_node.* = Node{ .SliceAccess = .{ 
+                    .object = node, 
+                    .start = start_expr,
+                    .end = end_expr,
+                } };
+            } else {
+                access_node.* = Node{ .IndexAccess = .{ 
+                    .object = node, 
+                    .index = start_expr.?,
+                } };
+            }
             node = access_node;
         }
 

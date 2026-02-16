@@ -58,7 +58,7 @@ if [ -z "\$1" ]; then
     echo "其他命令:"
     echo "  pc hostname kali           - 查看 Kali 主机名"
     echo ""
-    echo "可用系统: ubuntu, debian, fedora, arch, kali, opensuse, all"
+    echo "可用系统: ubuntu, debian, fedora, arch, kali, opensuse, rocky, all"
     echo ""
     echo "或直接运行脚本:"
     echo "  pc <脚本文件.pc>"
@@ -97,7 +97,7 @@ fi
 # 命令映射
 case "\$CMD" in
     # 系统名称作为第一个参数的情况
-    ubuntu|debian|fedora|arch|kali|opensuse|all)
+    ubuntu|debian|fedora|arch|kali|opensuse|rocky|all)
         SYSTEM="\$CMD"
         CMD="\$2"
         
@@ -133,6 +133,9 @@ case "\$CMD" in
                     opensuse)
                         lxc exec my-opensuse -- zypper install -y "\$PACKAGE"
                         ;;
+                    rocky)
+                        lxc exec my-rocky -- dnf install -y "\$PACKAGE"
+                        ;;
                     all)
                         echo "1️⃣  Ubuntu:"
                         sudo apt install -y "\$PACKAGE"
@@ -151,6 +154,9 @@ case "\$CMD" in
                         echo ""
                         echo "6️⃣  openSUSE:"
                         lxc exec my-opensuse -- zypper install -y "\$PACKAGE"
+                        echo ""
+                        echo "7️⃣  Rocky Linux:"
+                        lxc exec my-rocky -- dnf install -y "\$PACKAGE"
                         ;;
                 esac
                 
@@ -188,6 +194,9 @@ case "\$CMD" in
                     opensuse)
                         lxc exec my-opensuse -- zypper remove -y "\$PACKAGE"
                         ;;
+                    rocky)
+                        lxc exec my-rocky -- dnf remove -y "\$PACKAGE"
+                        ;;
                 esac
                 
                 echo ""
@@ -217,6 +226,9 @@ case "\$CMD" in
                     opensuse)
                         lxc exec my-opensuse -- zypper refresh
                         ;;
+                    rocky)
+                        lxc exec my-rocky -- dnf check-update
+                        ;;
                     all)
                         echo "1️⃣  Ubuntu:"
                         sudo apt update
@@ -235,6 +247,9 @@ case "\$CMD" in
                         echo ""
                         echo "6️⃣  openSUSE:"
                         lxc exec my-opensuse -- zypper refresh
+                        echo ""
+                        echo "7️⃣  Rocky Linux:"
+                        lxc exec my-rocky -- dnf check-update
                         ;;
                 esac
                 
@@ -275,6 +290,9 @@ case "\$CMD" in
                     opensuse)
                         lxc exec my-opensuse -- sh -c "\$COMMAND"
                         ;;
+                    rocky)
+                        lxc exec my-rocky -- sh -c "\$COMMAND"
+                        ;;
                     all)
                         echo "1️⃣  Ubuntu:"
                         sh -c "\$COMMAND"
@@ -293,6 +311,9 @@ case "\$CMD" in
                         echo ""
                         echo "6️⃣  openSUSE:"
                         lxc exec my-opensuse -- sh -c "\$COMMAND"
+                        echo ""
+                        echo "7️⃣  Rocky Linux:"
+                        lxc exec my-rocky -- sh -c "\$COMMAND"
                         ;;
                 esac
                 ;;
@@ -333,6 +354,9 @@ case "\$CMD" in
             opensuse)
                 lxc exec my-opensuse -- sh -c "\$COMMAND"
                 ;;
+            rocky)
+                lxc exec my-rocky -- sh -c "\$COMMAND"
+                ;;
             all)
                 echo "1️⃣  Ubuntu:"
                 sh -c "\$COMMAND"
@@ -351,6 +375,9 @@ case "\$CMD" in
                 echo ""
                 echo "6️⃣  openSUSE:"
                 lxc exec my-opensuse -- sh -c "\$COMMAND"
+                echo ""
+                echo "7️⃣  Rocky Linux:"
+                lxc exec my-rocky -- sh -c "\$COMMAND"
                 ;;
             *)
                 echo "❌ 未知系统: \$SYSTEM"
@@ -384,6 +411,9 @@ case "\$CMD" in
         echo "6️⃣  openSUSE:"
         lxc exec my-opensuse -- zypper refresh
         echo ""
+        echo "7️⃣  Rocky Linux:"
+        lxc exec my-rocky -- dnf check-update
+        echo ""
         echo "✅ 更新完成"
         ;;
     
@@ -416,6 +446,9 @@ case "\$CMD" in
         echo "6️⃣  openSUSE:"
         lxc exec my-opensuse -- zypper install -y "\$PACKAGE"
         echo ""
+        echo "7️⃣  Rocky Linux:"
+        lxc exec my-rocky -- dnf install -y "\$PACKAGE"
+        echo ""
         echo "✅ 安装完成"
         ;;
     
@@ -446,6 +479,9 @@ case "\$CMD" in
             opensuse)
                 lxc exec my-opensuse -- hostname
                 ;;
+            rocky)
+                lxc exec my-rocky -- hostname
+                ;;
             all)
                 echo "Ubuntu: \$(hostname)"
                 echo "Debian: \$(lxc exec my-debian -- hostname)"
@@ -453,6 +489,7 @@ case "\$CMD" in
                 echo "Arch: \$(lxc exec my-arch -- hostname)"
                 echo "Kali: \$(lxc exec my-kali -- hostname)"
                 echo "openSUSE: \$(lxc exec my-opensuse -- hostname)"
+                echo "Rocky: \$(lxc exec my-rocky -- hostname)"
                 ;;
             *)
                 echo "❌ 未知系统: \$SYSTEM"

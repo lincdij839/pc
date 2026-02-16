@@ -1,0 +1,24 @@
+# PC Language - String and List Slicing Examples
+
+# String slicing
+s = "Hello, World!"
+print("Original string:", s)
+print("s[0:5]:", s[0:5])      # "Hello"
+print("s[7:]:", s[7:])         # "World!"
+print("s[:5]:", s[:5])         # "Hello"
+print("s[7:12]:", s[7:12])     # "World"
+
+# List slicing
+numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+print("\nOriginal list:", numbers)
+print("numbers[2:5]:", numbers[2:5])    # [2, 3, 4]
+print("numbers[:3]:", numbers[:3])      # [0, 1, 2]
+print("numbers[7:]:", numbers[7:])      # [7, 8, 9]
+print("numbers[1:8]:", numbers[1:8])    # [1, 2, 3, 4, 5, 6, 7]
+
+# Edge cases
+print("\nEdge cases:")
+print("s[100:]:", s[100:])              # ""
+print("numbers[100:]:", numbers[100:])  # []
+print("s[0:0]:", s[0:0])                # ""
+print("numbers[5:5]:", numbers[5:5])    # []

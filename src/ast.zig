@@ -1,6 +1,12 @@
 // PC Language Abstract Syntax Tree
 const std = @import("std");
 
+pub const ExceptClause = struct {
+    exception_type: ?[]const u8,  // 异常类型名称，null 表示捕获所有异常
+    variable_name: ?[]const u8,   // 异常变量名（as variable）
+    body: *Node,                   // except 块的代码
+};
+
 pub const NodeKind = enum {
     Program,
     FunctionDef,
@@ -12,6 +18,8 @@ pub const NodeKind = enum {
     WhileLoop,
     ForLoop,
     ReturnStatement,
+    TryStatement,
+    RaiseStatement,
     BinaryOp,
     UnaryOp,
     FunctionCall,
@@ -23,6 +31,7 @@ pub const NodeKind = enum {
     LiteralList,
     LiteralDict,
     IndexAccess,
+    SliceAccess,
     Block,
 };
 
@@ -70,6 +79,14 @@ pub const Node = union(NodeKind) {
     ReturnStatement: struct {
         value: ?*Node,
     },
+    TryStatement: struct {
+        try_block: *Node,
+        except_clauses: std.ArrayList(ExceptClause),
+        finally_block: ?*Node,
+    },
+    RaiseStatement: struct {
+        exception: ?*Node,
+    },
     BinaryOp: struct {
         operator: []const u8,
         left: *Node,
@@ -108,6 +125,11 @@ pub const Node = union(NodeKind) {
     IndexAccess: struct {
         object: *Node,
         index: *Node,
+    },
+    SliceAccess: struct {
+        object: *Node,
+        start: ?*Node,  // null means start from beginning
+        end: ?*Node,    // null means go to end
     },
     Block: struct {
         statements: std.ArrayList(*Node),
@@ -210,6 +232,17 @@ pub fn freeNode(allocator: std.mem.Allocator, node: *Node) void {
         .ReturnStatement => |v| {
             if (v.value) |val| freeNode(allocator, val);
         },
+        .TryStatement => |v| {
+            freeNode(allocator, v.try_block);
+            for (v.except_clauses.items) |clause| {
+                freeNode(allocator, clause.body);
+            }
+            v.except_clauses.deinit();
+            if (v.finally_block) |fb| freeNode(allocator, fb);
+        },
+        .RaiseStatement => |v| {
+            if (v.exception) |exc| freeNode(allocator, exc);
+        },
         .BinaryOp => |v| {
             freeNode(allocator, v.left);
             freeNode(allocator, v.right);
@@ -243,6 +276,11 @@ pub fn freeNode(allocator: std.mem.Allocator, node: *Node) void {
         .IndexAccess => |v| {
             freeNode(allocator, v.object);
             freeNode(allocator, v.index);
+        },
+        .SliceAccess => |v| {
+            freeNode(allocator, v.object);
+            if (v.start) |start| freeNode(allocator, start);
+            if (v.end) |end| freeNode(allocator, end);
         },
         .Block => |v| {
             for (v.statements.items) |stmt| {

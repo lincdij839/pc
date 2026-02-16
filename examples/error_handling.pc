@@ -1,0 +1,44 @@
+# 错误处理示例
+
+print("=== 错误处理示例 ===")
+print("")
+
+# 示例 1：基本的 try/except（暂未实现，展示语法）
+print("1. 文件操作错误处理")
+print("   尝试读取不存在的文件...")
+
+# 检查文件是否存在
+if file_exists("nonexistent.txt"):
+    content = read_file("nonexistent.txt")
+    print("   文件内容: " + content)
+else:
+    print("   文件不存在，跳过读取")
+
+print("")
+
+# 示例 2：除零错误处理
+print("2. 数学运算错误处理")
+x = 10
+y = 0
+
+if y != 0:
+    result = x / y
+    print("   结果: " + str(result))
+else:
+    print("   错误: 除数不能为零")
+
+print("")
+
+# 示例 3：列表索引错误处理
+print("3. 列表索引错误处理")
+numbers = [1, 2, 3, 4, 5]
+index = 10
+
+if index < len(numbers):
+    value = numbers[index]
+    print("   值: " + str(value))
+else:
+    print("   错误: 索引超出范围")
+
+print("")
+print("=== 完成 ===")

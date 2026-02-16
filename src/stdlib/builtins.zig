@@ -19,15 +19,25 @@ pub const builtins = std.StaticStringMap(BuiltinFn).initComptime(.{
     .{ "range", builtin_range },
     .{ "str", builtin_str },
     .{ "int", builtin_int },
+    .{ "float", builtin_float },
+    .{ "bool", builtin_bool },
+    .{ "type", builtin_type },
     .{ "abs", builtin_abs },
     .{ "max", builtin_max },
     .{ "min", builtin_min },
     .{ "pow", builtin_pow },
+    .{ "sum", builtin_sum },
+    .{ "sorted", builtin_sorted },
+    .{ "reversed", builtin_reversed },
     .{ "upper", builtin_upper },
     .{ "lower", builtin_lower },
     .{ "append", builtin_append },
+    .{ "pop", builtin_pop },
+    .{ "insert", builtin_insert },
+    .{ "remove", builtin_remove },
     .{ "keys", builtin_keys },
     .{ "values", builtin_values },
+    .{ "items", builtin_items },
     // String utilities
     .{ "split", string_utils.builtin_split },
     .{ "join", string_utils.builtin_join },
@@ -149,6 +159,202 @@ fn builtin_int(_: *Interpreter, args: []Value) InterpreterError!Value {
         else => 0,
     };
     return Value{ .Int = int_val };
+}
+
+// float(x) - Convert to float
+fn builtin_float(_: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0) return Value{ .Float = 0.0 };
+    
+    const float_val = switch (args[0]) {
+        .Int => |i| @as(f64, @floatFromInt(i)),
+        .Float => |f| f,
+        .Bool => |b| if (b) @as(f64, 1.0) else @as(f64, 0.0),
+        .String => |s| std.fmt.parseFloat(f64, s) catch 0.0,
+        else => 0.0,
+    };
+    return Value{ .Float = float_val };
+}
+
+// bool(x) - Convert to boolean
+fn builtin_bool(_: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0) return Value{ .Bool = false };
+    
+    const bool_val = switch (args[0]) {
+        .Int => |i| i != 0,
+        .Float => |f| f != 0.0,
+        .Bool => |b| b,
+        .String => |s| s.len > 0,
+        .None => false,
+        .List => |l| l.items.len > 0,
+        .Dict => |d| d.count() > 0,
+        else => false,
+    };
+    return Value{ .Bool = bool_val };
+}
+
+// type(x) - Return type name
+fn builtin_type(interp: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0) return Value{ .String = "none" };
+    
+    const type_name = switch (args[0]) {
+        .Int => "int",
+        .Float => "float",
+        .Bool => "bool",
+        .String => "str",
+        .None => "none",
+        .List => "list",
+        .Dict => "dict",
+        .Function => "function",
+    };
+    
+    const result = try interp.allocator.dupe(u8, type_name);
+    return Value{ .String = result };
+}
+
+// sum(list) - Sum of list elements
+fn builtin_sum(_: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0 or args[0] != .List) return Value{ .Int = 0 };
+    
+    var sum_int: i64 = 0;
+    var sum_float: f64 = 0.0;
+    var has_float = false;
+    
+    for (args[0].List.items) |item| {
+        switch (item) {
+            .Int => |i| {
+                if (has_float) {
+                    sum_float += @floatFromInt(i);
+                } else {
+                    sum_int += i;
+                }
+            },
+            .Float => |f| {
+                if (!has_float) {
+                    sum_float = @floatFromInt(sum_int);
+                    has_float = true;
+                }
+                sum_float += f;
+            },
+            else => {},
+        }
+    }
+    
+    if (has_float) {
+        return Value{ .Float = sum_float };
+    } else {
+        return Value{ .Int = sum_int };
+    }
+}
+
+// sorted(list) - Return sorted list
+fn builtin_sorted(interp: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0 or args[0] != .List) return Value.None;
+    
+    var new_list = std.ArrayList(Value).init(interp.allocator);
+    try new_list.appendSlice(args[0].List.items);
+    
+    // Simple bubble sort for integers
+    var i: usize = 0;
+    while (i < new_list.items.len) : (i += 1) {
+        var j: usize = 0;
+        while (j < new_list.items.len - 1 - i) : (j += 1) {
+            if (new_list.items[j] == .Int and new_list.items[j + 1] == .Int) {
+                if (new_list.items[j].Int > new_list.items[j + 1].Int) {
+                    const temp = new_list.items[j];
+                    new_list.items[j] = new_list.items[j + 1];
+                    new_list.items[j + 1] = temp;
+                }
+            }
+        }
+    }
+    
+    return Value{ .List = new_list };
+}
+
+// reversed(list) - Return reversed list
+fn builtin_reversed(interp: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0 or args[0] != .List) return Value.None;
+    
+    var new_list = std.ArrayList(Value).init(interp.allocator);
+    var i: usize = args[0].List.items.len;
+    while (i > 0) {
+        i -= 1;
+        try new_list.append(args[0].List.items[i]);
+    }
+    
+    return Value{ .List = new_list };
+}
+
+// pop(list, index) - Remove and return item at index
+fn builtin_pop(_: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0 or args[0] != .List) return Value.None;
+    
+    const index = if (args.len > 1 and args[1] == .Int) 
+        args[1].Int 
+    else 
+        @as(i64, @intCast(args[0].List.items.len)) - 1;
+    
+    if (index < 0 or index >= args[0].List.items.len) {
+        return Value.None;
+    }
+    
+    const value = args[0].List.items[@intCast(index)];
+    _ = args[0].List.orderedRemove(@intCast(index));
+    return value;
+}
+
+// insert(list, index, value) - Insert value at index
+fn builtin_insert(_: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len < 3 or args[0] != .List or args[1] != .Int) {
+        return Value.None;
+    }
+    
+    const index = args[1].Int;
+    if (index < 0 or index > args[0].List.items.len) {
+        return Value.None;
+    }
+    
+    args[0].List.insert(@intCast(index), args[2]) catch {
+        return Value.None;
+    };
+    
+    return Value.None;
+}
+
+// remove(list, value) - Remove first occurrence of value
+fn builtin_remove(_: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len < 2 or args[0] != .List) return Value.None;
+    
+    for (args[0].List.items, 0..) |item, i| {
+        // Simple equality check for Int and String
+        const equal = switch (item) {
+            .Int => |iv| if (args[1] == .Int) iv == args[1].Int else false,
+            .String => |sv| if (args[1] == .String) std.mem.eql(u8, sv, args[1].String) else false,
+            else => false,
+        };
+        
+        if (equal) {
+            _ = args[0].List.orderedRemove(i);
+            break;
+        }
+    }
+    
+    return Value.None;
+}
+
+// items(dict) - Return list of (key, value) tuples
+fn builtin_items(interp: *Interpreter, args: []Value) InterpreterError!Value {
+    if (args.len == 0 or args[0] != .Dict) return Value.None;
+    
+    var items_list = std.ArrayList(Value).init(interp.allocator);
+    var it = args[0].Dict.iterator();
+    while (it.next()) |entry| {
+        var pair = std.ArrayList(Value).init(interp.allocator);
+        try pair.append(Value{ .String = entry.key_ptr.* });
+        try pair.append(entry.value_ptr.*);
+        try items_list.append(Value{ .List = pair });
+    }
+    return Value{ .List = items_list };
 }
 
 // abs(x) - Absolute value

@@ -144,6 +144,67 @@ pub const Interpreter = struct {
                 break :blk Value.None;
             },
 
+            .SliceAccess => |v| blk: {
+                const obj = try self.eval(v.object);
+                
+                // Get start and end indices
+                const start_val = if (v.start) |s| try self.eval(s) else Value{ .Int = 0 };
+                const end_val = if (v.end) |e| try self.eval(e) else null;
+                
+                if (start_val != .Int) {
+                    break :blk Value.None;
+                }
+                
+                const start_idx = @as(usize, @intCast(@max(0, start_val.Int)));
+                
+                // Handle string slicing
+                if (obj == .String) {
+                    const str = obj.String;
+                    const end_idx = if (end_val) |ev| 
+                        if (ev == .Int) @as(usize, @intCast(@min(@as(i64, @intCast(str.len)), ev.Int))) else str.len
+                    else 
+                        str.len;
+                    
+                    if (start_idx >= str.len) {
+                        break :blk Value{ .String = try self.arena.allocator().dupe(u8, "") };
+                    }
+                    
+                    const actual_end = @min(end_idx, str.len);
+                    if (start_idx >= actual_end) {
+                        break :blk Value{ .String = try self.arena.allocator().dupe(u8, "") };
+                    }
+                    
+                    const slice = str[start_idx..actual_end];
+                    break :blk Value{ .String = try self.arena.allocator().dupe(u8, slice) };
+                }
+                
+                // Handle list slicing
+                if (obj == .List) {
+                    const list = obj.List;
+                    const end_idx = if (end_val) |ev| 
+                        if (ev == .Int) @as(usize, @intCast(@min(@as(i64, @intCast(list.items.len)), ev.Int))) else list.items.len
+                    else 
+                        list.items.len;
+                    
+                    var result = std.ArrayList(Value).init(self.allocator);
+                    
+                    if (start_idx >= list.items.len) {
+                        break :blk Value{ .List = result };
+                    }
+                    
+                    const actual_end = @min(end_idx, list.items.len);
+                    if (start_idx < actual_end) {
+                        for (list.items[start_idx..actual_end]) |item| {
+                            try result.append(item);
+                        }
+                    }
+                    
+                    break :blk Value{ .List = result };
+                }
+                
+                break :blk Value.None;
+            },
+
             .Identifier => |v| blk: {
                 // Lookup from innermost scope to outermost
                 if (self.scopes.items.len > 0) {

@@ -1,0 +1,55 @@
+# 内置函数测试
+
+print("=== 内置函数测试 ===")
+print("")
+
+# 1. 类型转换
+print("1. 类型转换")
+print("   int('123'): " + str(int("123")))
+print("   float('3.14'): " + str(float("3.14")))
+print("   bool(1): " + str(bool(1)))
+print("   bool(0): " + str(bool(0)))
+print("   type(123): " + type(123))
+print("   type('hello'): " + type("hello"))
+
+print("")
+
+# 2. 列表操作
+print("2. 列表操作")
+numbers = [5, 2, 8, 1, 9, 3]
+print("   原始列表: " + str(numbers))
+print("   sum: " + str(sum(numbers)))
+print("   sorted: " + str(sorted(numbers)))
+print("   reversed: " + str(reversed(numbers)))
+
+print("")
+
+# 3. 字符串操作
+print("3. 字符串操作")
+text = "Hello World"
+print("   原始: " + text)
+print("   upper: " + upper(text))
+print("   lower: " + lower(text))
+words = split(text, " ")
+print("   split: " + str(words))
+
+print("")
+
+# 4. 数学函数
+print("4. 数学函数")
+x = 10
+print("   abs(10): " + str(abs(x)))
+print("   max(5, 10): " + str(max(5, 10)))
+print("   min(5, 10): " + str(min(5, 10)))
+print("   pow(2, 3): " + str(pow(2, 3)))
+
+print("")
+
+# 5. 系统信息
+print("5. 系统信息")
+print("   os_name: " + os_name())
+print("   arch: " + arch())
+print("   cwd: " + cwd())
+
+print("")
+print("=== 完成 ===")

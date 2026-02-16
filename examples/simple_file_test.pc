@@ -1,0 +1,17 @@
+# 简单文件测试
+
+print("Testing file operations...")
+
+# 写入文件
+write_file("test.txt", "Hello from PC!")
+print("File written")
+
+# 读取文件
+content = read_file("test.txt")
+print("File content: " + content)
+
+# 检查文件
+exists = file_exists("test.txt")
+print("File exists: " + str(exists))
+
+print("Done!")
