@@ -1,0 +1,43 @@
+# PC Language - Dictionary Methods Examples
+
+# Create a dictionary
+person = {"name": "Alice", "age": 30, "city": "Beijing"}
+print("Original dict:", person)
+
+# keys() - get all keys
+keys = person.keys()
+print("Keys:", keys)
+
+# values() - get all values
+values = person.values()
+print("Values:", values)
+
+# items() - get all key-value pairs
+items = person.items()
+print("Items:", items)
+
+# get() - get value with default
+name = person.get("name")
+print("Name:", name)
+
+country = person.get("country", "China")
+print("Country (with default):", country)
+
+# pop() - remove and return value
+age = person.pop("age")
+print("Popped age:", age)
+print("After pop('age'):", person)
+
+# pop with default
+salary = person.pop("salary", 0)
+print("Popped salary (with default):", salary)
+
+# update() - merge another dict
+person.update({"age": 31, "job": "Engineer"})
+print("After update:", person)
+
+# clear() - remove all items
+test_dict = {"a": 1, "b": 2}
+print("\nTest dict before clear:", test_dict)
+test_dict.clear()
+print("Test dict after clear:", test_dict)

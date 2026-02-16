@@ -461,7 +461,6 @@ pub const Interpreter = struct {
         // Check if this is a method call (callee is MemberAccess)
         if (callee.* == .MemberAccess) {
             const member_access = callee.MemberAccess;
-            const obj = try self.eval(member_access.object);
             const method_name = member_access.member;
             
             // Evaluate all arguments
@@ -471,23 +470,50 @@ pub const Interpreter = struct {
                 try eval_args.append(try self.eval(arg));
             }
             
+            // For list methods that modify the list, we need to get the variable name
+            // and modify it in place
+            if (member_access.object.* == .Identifier) {
+                const var_name = member_access.object.Identifier.name;
+                
+                // Try to get mutable reference from globals
+                if (self.globals.getPtr(var_name)) |obj_ptr| {
+                    // Handle list methods
+                    if (obj_ptr.* == .List) {
+                        return try self.callListMethod(obj_ptr, method_name, eval_args.items);
+                    }
+                    
+                    // Handle dict methods
+                    if (obj_ptr.* == .Dict) {
+                        return try self.callDictMethod(obj_ptr, method_name, eval_args.items);
+                    }
+                }
+                
+                // Try from scopes
+                if (self.scopes.items.len > 0) {
+                    var i: usize = self.scopes.items.len;
+                    while (i > 0) {
+                        i -= 1;
+                        if (self.scopes.items[i].getPtr(var_name)) |obj_ptr| {
+                            // Handle list methods
+                            if (obj_ptr.* == .List) {
+                                return try self.callListMethod(obj_ptr, method_name, eval_args.items);
+                            }
+                            
+                            // Handle dict methods
+                            if (obj_ptr.* == .Dict) {
+                                return try self.callDictMethod(obj_ptr, method_name, eval_args.items);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // For non-modifying methods, evaluate the object
+            const obj = try self.eval(member_access.object);
+            
             // Handle string methods
             if (obj == .String) {
                 return try self.callStringMethod(obj.String, method_name, eval_args.items);
-            }
-            
-            // Handle list methods
-            if (obj == .List) {
-                // For list methods, we need mutable access
-                // Since obj is a copy, we can't modify the original
-                // For now, return None - list methods need special handling
-                return Value.None;
-            }
-            
-            // Handle dict methods
-            if (obj == .Dict) {
-                // Similar issue with dict methods
-                return Value.None;
             }
             
             return Value.None;
@@ -592,6 +618,220 @@ pub const Interpreter = struct {
                 return Value{ .String = try result.toOwnedSlice() };
             }
             return Value{ .String = try self.arena.allocator().dupe(u8, str) };
+        }
+        
+        return Value.None;
+    }
+
+    fn callListMethod(self: *Interpreter, list_ptr: *Value, method: []const u8, args: []Value) !Value {
+        _ = self;
+        if (list_ptr.* != .List) return Value.None;
+        
+        if (std.mem.eql(u8, method, "append")) {
+            if (args.len > 0) {
+                try list_ptr.List.append(args[0]);
+            }
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "pop")) {
+            if (list_ptr.List.items.len > 0) {
+                const index = if (args.len > 0 and args[0] == .Int)
+                    @as(usize, @intCast(args[0].Int))
+                else
+                    list_ptr.List.items.len - 1;
+                
+                if (index < list_ptr.List.items.len) {
+                    const value = list_ptr.List.items[index];
+                    _ = list_ptr.List.orderedRemove(index);
+                    return value;
+                }
+            }
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "insert")) {
+            if (args.len >= 2 and args[0] == .Int) {
+                const index = @as(usize, @intCast(@max(0, args[0].Int)));
+                const actual_index = @min(index, list_ptr.List.items.len);
+                try list_ptr.List.insert(actual_index, args[1]);
+            }
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "remove")) {
+            if (args.len > 0) {
+                // Find and remove first occurrence
+                for (list_ptr.List.items, 0..) |item, i| {
+                    const matches = switch (item) {
+                        .Int => |v| args[0] == .Int and v == args[0].Int,
+                        .String => |v| args[0] == .String and std.mem.eql(u8, v, args[0].String),
+                        .Bool => |v| args[0] == .Bool and v == args[0].Bool,
+                        else => false,
+                    };
+                    if (matches) {
+                        _ = list_ptr.List.orderedRemove(i);
+                        break;
+                    }
+                }
+            }
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "clear")) {
+            list_ptr.List.clearRetainingCapacity();
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "extend")) {
+            if (args.len > 0 and args[0] == .List) {
+                for (args[0].List.items) |item| {
+                    try list_ptr.List.append(item);
+                }
+            }
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "count")) {
+            if (args.len > 0) {
+                var count: i64 = 0;
+                for (list_ptr.List.items) |item| {
+                    const matches = switch (item) {
+                        .Int => |v| args[0] == .Int and v == args[0].Int,
+                        .String => |v| args[0] == .String and std.mem.eql(u8, v, args[0].String),
+                        .Bool => |v| args[0] == .Bool and v == args[0].Bool,
+                        else => false,
+                    };
+                    if (matches) count += 1;
+                }
+                return Value{ .Int = count };
+            }
+            return Value{ .Int = 0 };
+        }
+        
+        if (std.mem.eql(u8, method, "index")) {
+            if (args.len > 0) {
+                for (list_ptr.List.items, 0..) |item, i| {
+                    const matches = switch (item) {
+                        .Int => |v| args[0] == .Int and v == args[0].Int,
+                        .String => |v| args[0] == .String and std.mem.eql(u8, v, args[0].String),
+                        .Bool => |v| args[0] == .Bool and v == args[0].Bool,
+                        else => false,
+                    };
+                    if (matches) {
+                        return Value{ .Int = @as(i64, @intCast(i)) };
+                    }
+                }
+            }
+            return Value{ .Int = -1 };
+        }
+        
+        if (std.mem.eql(u8, method, "reverse")) {
+            std.mem.reverse(Value, list_ptr.List.items);
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "sort")) {
+            // Simple bubble sort for now
+            const items = list_ptr.List.items;
+            if (items.len <= 1) return Value.None;
+            
+            var i: usize = 0;
+            while (i < items.len - 1) : (i += 1) {
+                var j: usize = 0;
+                while (j < items.len - 1 - i) : (j += 1) {
+                    const should_swap = switch (items[j]) {
+                        .Int => |a| items[j + 1] == .Int and a > items[j + 1].Int,
+                        .String => |a| items[j + 1] == .String and std.mem.order(u8, a, items[j + 1].String) == .gt,
+                        else => false,
+                    };
+                    if (should_swap) {
+                        const temp = items[j];
+                        items[j] = items[j + 1];
+                        items[j + 1] = temp;
+                    }
+                }
+            }
+            return Value.None;
+        }
+        
+        return Value.None;
+    }
+
+    fn callDictMethod(self: *Interpreter, dict_ptr: *Value, method: []const u8, args: []Value) !Value {
+        if (dict_ptr.* != .Dict) return Value.None;
+        
+        if (std.mem.eql(u8, method, "keys")) {
+            var result = std.ArrayList(Value).init(self.allocator);
+            var iter = dict_ptr.Dict.keyIterator();
+            while (iter.next()) |key| {
+                try result.append(Value{ .String = key.* });
+            }
+            return Value{ .List = result };
+        }
+        
+        if (std.mem.eql(u8, method, "values")) {
+            var result = std.ArrayList(Value).init(self.allocator);
+            var iter = dict_ptr.Dict.valueIterator();
+            while (iter.next()) |value| {
+                try result.append(value.*);
+            }
+            return Value{ .List = result };
+        }
+        
+        if (std.mem.eql(u8, method, "items")) {
+            var result = std.ArrayList(Value).init(self.allocator);
+            var iter = dict_ptr.Dict.iterator();
+            while (iter.next()) |entry| {
+                var pair = std.ArrayList(Value).init(self.allocator);
+                try pair.append(Value{ .String = entry.key_ptr.* });
+                try pair.append(entry.value_ptr.*);
+                try result.append(Value{ .List = pair });
+            }
+            return Value{ .List = result };
+        }
+        
+        if (std.mem.eql(u8, method, "get")) {
+            if (args.len > 0 and args[0] == .String) {
+                const key = args[0].String;
+                if (dict_ptr.Dict.get(key)) |value| {
+                    return value;
+                }
+                // Return default value if provided
+                if (args.len > 1) {
+                    return args[1];
+                }
+            }
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "clear")) {
+            dict_ptr.Dict.clearRetainingCapacity();
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "pop")) {
+            if (args.len > 0 and args[0] == .String) {
+                const key = args[0].String;
+                if (dict_ptr.Dict.fetchRemove(key)) |kv| {
+                    return kv.value;
+                }
+                // Return default value if provided
+                if (args.len > 1) {
+                    return args[1];
+                }
+            }
+            return Value.None;
+        }
+        
+        if (std.mem.eql(u8, method, "update")) {
+            if (args.len > 0 and args[0] == .Dict) {
+                var iter = args[0].Dict.iterator();
+                while (iter.next()) |entry| {
+                    try dict_ptr.Dict.put(entry.key_ptr.*, entry.value_ptr.*);
+                }
+            }
+            return Value.None;
         }
         
         return Value.None;

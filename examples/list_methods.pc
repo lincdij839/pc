@@ -1,0 +1,66 @@
+# PC Language - List Methods Examples
+
+# Create a list
+numbers = [1, 2, 3]
+print("Original list:", numbers)
+
+# append() - add element to end
+numbers.append(4)
+print("After append(4):", numbers)
+
+numbers.append(5)
+print("After append(5):", numbers)
+
+# pop() - remove and return last element
+last = numbers.pop()
+print("Popped:", last)
+print("After pop():", numbers)
+
+# pop(index) - remove and return element at index
+second = numbers.pop(1)
+print("Popped at index 1:", second)
+print("After pop(1):", numbers)
+
+# insert() - insert element at index
+numbers.insert(1, 10)
+print("After insert(1, 10):", numbers)
+
+numbers.insert(0, 0)
+print("After insert(0, 0):", numbers)
+
+# remove() - remove first occurrence of value
+numbers.remove(10)
+print("After remove(10):", numbers)
+
+# extend() - add all elements from another list
+numbers.extend([5, 6, 7])
+print("After extend([5, 6, 7]):", numbers)
+
+# count() - count occurrences
+numbers.append(3)
+count = numbers.count(3)
+print("Count of 3:", count)
+
+# index() - find index of first occurrence
+idx = numbers.index(5)
+print("Index of 5:", idx)
+
+# reverse() - reverse list in place
+numbers.reverse()
+print("After reverse():", numbers)
+
+# sort() - sort list in place
+numbers.sort()
+print("After sort():", numbers)
+
+# clear() - remove all elements
+test_list = [1, 2, 3]
+print("\nTest list before clear:", test_list)
+test_list.clear()
+print("Test list after clear:", test_list)
+
+# String list
+words = ["banana", "apple", "cherry"]
+print("\nWords:", words)
+words.sort()
+print("Sorted words:", words)
