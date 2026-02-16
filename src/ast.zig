@@ -29,6 +29,7 @@ pub const NodeKind = enum {
     LiteralString,
     LiteralBool,
     LiteralList,
+    ListComprehension,
     LiteralDict,
     IndexAccess,
     SliceAccess,
@@ -118,6 +119,12 @@ pub const Node = union(NodeKind) {
     },
     LiteralList: struct {
         elements: std.ArrayList(*Node),
+    },
+    ListComprehension: struct {
+        expression: *Node,      // 表达式部分，如 x*2
+        iterator: *Node,        // 迭代变量，如 x
+        iterable: *Node,        // 可迭代对象，如 range(10)
+        condition: ?*Node,      // 可选的条件，如 if x > 5
     },
     LiteralDict: struct {
         keys: std.ArrayList(*Node),
@@ -267,6 +274,12 @@ pub fn freeNode(allocator: std.mem.Allocator, node: *Node) void {
                 freeNode(allocator, elem);
             }
             v.elements.deinit();
+        },
+        .ListComprehension => |v| {
+            freeNode(allocator, v.expression);
+            freeNode(allocator, v.iterator);
+            freeNode(allocator, v.iterable);
+            if (v.condition) |cond| freeNode(allocator, cond);
         },
         .LiteralDict => |v| {
             for (v.keys.items) |key| {

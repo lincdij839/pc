@@ -1,0 +1,44 @@
+# PC Language - List Comprehension Examples
+
+# Basic list comprehension
+squares = [x * x for x in range(10)]
+print("Squares:", squares)
+
+# List comprehension with condition
+evens = [x for x in range(20) if x % 2 == 0]
+print("Even numbers:", evens)
+
+# List comprehension with expression
+doubled = [x * 2 for x in range(5)]
+print("Doubled:", doubled)
+
+# List comprehension from existing list
+numbers = [1, 2, 3, 4, 5]
+cubes = [n * n * n for n in numbers]
+print("Cubes:", cubes)
+
+# List comprehension with condition on existing list
+big_numbers = [n for n in numbers if n > 2]
+print("Numbers > 2:", big_numbers)
+
+# More complex expression
+result = [x * 2 + 1 for x in range(5)]
+print("x*2+1:", result)
+
+# Filtering with condition
+filtered = [x for x in range(10) if x > 5]
+print("Numbers > 5:", filtered)
+
+# String manipulation with list comprehension
+# (This will work once we have string iteration)
+# chars = [c for c in "hello"]
+
+# Nested calculation
+powers = [2 * 2 * 2 for x in range(3)]
+print("Powers:", powers)
+
+# Using list comprehension result
+sum_of_squares = 0
+for n in [x * x for x in range(5)]:
+    sum_of_squares = sum_of_squares + n
+print("Sum of squares:", sum_of_squares)

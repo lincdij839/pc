@@ -102,6 +102,79 @@ pub const Interpreter = struct {
                 break :blk Value{ .List = list };
             },
 
+            .ListComprehension => |v| blk: {
+                var result = std.ArrayList(Value).init(self.allocator);
+                
+                // Evaluate the iterable
+                const iterable = try self.eval(v.iterable);
+                
+                // Iterate over the iterable
+                if (iterable == .List) {
+                    for (iterable.List.items) |item| {
+                        // Set iterator variable
+                        if (v.iterator.* == .Identifier) {
+                            if (self.scopes.items.len > 0) {
+                                try self.scopes.items[self.scopes.items.len - 1].put(v.iterator.Identifier.name, item);
+                            } else {
+                                try self.globals.put(v.iterator.Identifier.name, item);
+                            }
+                        }
+                        
+                        // Check condition if present
+                        var should_include = true;
+                        if (v.condition) |cond| {
+                            const cond_result = try self.eval(cond);
+                            should_include = switch (cond_result) {
+                                .Bool => |b| b,
+                                .Int => |i| i != 0,
+                                .None => false,
+                                else => true,
+                            };
+                        }
+                        
+                        // Evaluate expression and add to result
+                        if (should_include) {
+                            const value = try self.eval(v.expression);
+                            try result.append(value);
+                        }
+                    }
+                } else if (iterable == .Int) {
+                    // Support range-like iteration
+                    const max = iterable.Int;
+                    var i: i64 = 0;
+                    while (i < max) : (i += 1) {
+                        // Set iterator variable
+                        if (v.iterator.* == .Identifier) {
+                            if (self.scopes.items.len > 0) {
+                                try self.scopes.items[self.scopes.items.len - 1].put(v.iterator.Identifier.name, Value{ .Int = i });
+                            } else {
+                                try self.globals.put(v.iterator.Identifier.name, Value{ .Int = i });
+                            }
+                        }
+                        
+                        // Check condition if present
+                        var should_include = true;
+                        if (v.condition) |cond| {
+                            const cond_result = try self.eval(cond);
+                            should_include = switch (cond_result) {
+                                .Bool => |b| b,
+                                .Int => |i_val| i_val != 0,
+                                .None => false,
+                                else => true,
+                            };
+                        }
+                        
+                        // Evaluate expression and add to result
+                        if (should_include) {
+                            const value = try self.eval(v.expression);
+                            try result.append(value);
+                        }
+                    }
+                }
+                
+                break :blk Value{ .List = result };
+            },
+
             .LiteralDict => |v| blk: {
                 var dict = std.StringHashMap(Value).init(self.allocator);
                 for (v.keys.items, v.values.items) |key_node, val_node| {

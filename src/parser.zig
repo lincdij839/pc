@@ -300,7 +300,7 @@ pub const Parser = struct {
                     while (true) {
                         const tok = self.current();
                         const is_operator = tok.kind == .Plus or tok.kind == .Minus or
-                            tok.kind == .Star or tok.kind == .Slash or
+                            tok.kind == .Star or tok.kind == .Slash or tok.kind == .Percent or
                             tok.kind == .EqualEqual or tok.kind == .NotEqual or
                             tok.kind == .Less or tok.kind == .Greater;
 
@@ -312,6 +312,7 @@ pub const Parser = struct {
                             .Minus => "-",
                             .Star => "*",
                             .Slash => "/",
+                            .Percent => "%",
                             .EqualEqual => "==",
                             .NotEqual => "!=",
                             .Less => "<",
@@ -513,14 +514,55 @@ pub const Parser = struct {
 
     fn parseListLiteral(self: *Parser) !*Node {
         _ = try self.expect(.LeftBracket);
-        const list = try ast.createNode(self.allocator, .LiteralList);
-
-        while (self.current().kind != .RightBracket and self.current().kind != .Eof) {
-            const elem = try self.parseExpression();
-            try list.LiteralList.elements.append(elem);
-            if (!self.match(.Comma)) break;
+        
+        // Check if this might be a list comprehension
+        // We need to look ahead to see if there's a 'for' keyword
+        if (self.current().kind != .RightBracket) {
+            // Parse first expression
+            const first_expr = try self.parseExpression();
+            
+            // Check if this is a list comprehension
+            if (self.current().kind == .For) {
+                // This is a list comprehension: [expr for var in iterable]
+                _ = try self.expect(.For);
+                const iterator = try self.parsePrimary();
+                _ = try self.expect(.In);
+                const iterable = try self.parseExpression();
+                
+                // Optional condition: if condition
+                var condition: ?*Node = null;
+                if (self.match(.If)) {
+                    condition = try self.parseExpression();
+                }
+                
+                _ = try self.expect(.RightBracket);
+                
+                const node = try self.allocator.create(Node);
+                node.* = Node{ .ListComprehension = .{
+                    .expression = first_expr,
+                    .iterator = iterator,
+                    .iterable = iterable,
+                    .condition = condition,
+                } };
+                return node;
+            }
+            
+            // Regular list literal
+            const list = try ast.createNode(self.allocator, .LiteralList);
+            try list.LiteralList.elements.append(first_expr);
+            
+            while (self.match(.Comma)) {
+                if (self.current().kind == .RightBracket) break;
+                const elem = try self.parseExpression();
+                try list.LiteralList.elements.append(elem);
+            }
+            
+            _ = try self.expect(.RightBracket);
+            return list;
         }
-
+        
+        // Empty list
+        const list = try ast.createNode(self.allocator, .LiteralList);
         _ = try self.expect(.RightBracket);
         return list;
     }
